@@ -209,11 +209,11 @@
   <div class="section">
     <div class="section-title">❓ 아직 아리까리한 것 (확인 필요)</div>
     <div class="unknown-block">
-      <div class="unknown-item"><div class="unknown-q">Q1</div><div><strong>bundle_anim:47이 Ninja Pack인가?</strong> — 앱 로그엔 48(Zombie), 49(Skate)만 보임. 내부 문서엔 <code>bundle_anim:47</code> 언급. → <strong>Server 담당자 확인</strong></div></div>
-      <div class="unknown-item"><div class="unknown-q">Q2</div><div><strong>Swim / Fall이 이번 브랜치에 QA 가능한 상태인가?</strong> — 내부 문서에 범위로 명시됐으나 현재 빌드에 포함됐는지 불명확. → <strong>Unreal 담당자 확인</strong></div></div>
-      <div class="unknown-item"><div class="unknown-q">Q3</div><div><strong>림라이트/코스튬 이슈 재현 조건이 뭔가?</strong> — Sprint31 우선 항목으로 명시됐으나 어떤 코스튬 조합에서 발생하는지 모름. → <strong>Art / 기획 담당자 확인</strong></div></div>
-      <div class="unknown-item"><div class="unknown-q">Q4</div><div><strong>Cooker output이 현재 브랜치에서 접근 가능한가?</strong> — <code>emote_table.json</code>, <code>bundle_table.json</code> 위치와 최신본 확인. → <strong>Server 담당자 확인</strong></div></div>
-      <div class="unknown-item"><div class="unknown-q">Q5</div><div><strong>Stylish Animation Pack</strong> — Figma에 "Stylish" (270) 존재, 개발 빌드엔 "Default" (무료)만. 미구현 or Default 이름 변경? → <strong>기획 담당자 확인</strong></div></div>
+      <div class="unknown-item"><div class="unknown-q">Q1</div><div><strong>bundle_anim:47이 Ninja Pack인가?</strong> — 앱 로그엔 48(Zombie), 49(Skate)만 보임. 내부 문서엔 <code>bundle_anim:47</code> 언급. Ninja가 47번인지 기획/서버 팀 확인 필요. → <strong>@이재니 / @김상현</strong></div></div>
+      <div class="unknown-item"><div class="unknown-q">Q2</div><div><strong>Swim / Fall이 이번 브랜치에 QA 가능한 상태인가?</strong> — 내부 문서에 범위로 명시됐으나 현재 빌드에 포함됐는지 불명확. → <strong>@정석영 / @유현욱</strong></div></div>
+      <div class="unknown-item"><div class="unknown-q">Q3</div><div><strong>림라이트/코스튬 이슈 재현 조건이 뭔가?</strong> — Sprint31 우선 항목으로 명시됐으나 어떤 코스튬 조합에서 발생하는지 모름. → <strong>@최정효 / @이재니</strong></div></div>
+      <div class="unknown-item"><div class="unknown-q">Q4</div><div><strong>Cooker output이 현재 브랜치에서 접근 가능한가?</strong> — <code>emote_table.json</code>, <code>bundle_table.json</code> 위치와 최신본 확인. → <strong>@김상현 / @남정석</strong></div></div>
+      <div class="unknown-item"><div class="unknown-q">Q5</div><div><strong>Stylish Animation Pack</strong> — Figma에 "Stylish" (270) 존재, 개발 빌드엔 "Default" (무료)만. 미구현 or Default 이름 변경? → <strong>@이재니</strong></div></div>
     </div>
   </div>
 
@@ -223,15 +223,15 @@
       <table>
         <thead><tr><th>아티팩트</th><th>위치</th><th>담당</th><th>상태</th></tr></thead>
         <tbody>
-          <tr><td>브랜치 빌드 APK</td><td><code>ovdr-8654-anim-emote</code> 브랜치</td><td><span class="badge badge-q">TBD</span></td><td><span class="badge badge-q">확인 필요</span></td></tr>
-          <tr><td><code>emote_table.json</code></td><td>Cooker output</td><td><span class="badge badge-q">TBD</span></td><td><span class="badge badge-q">확인 필요</span></td></tr>
-          <tr><td><code>bundle_table.json</code></td><td>Cooker output</td><td><span class="badge badge-q">TBD</span></td><td><span class="badge badge-q">확인 필요</span></td></tr>
-          <tr><td><code>animation_table.json</code></td><td>Cooker output</td><td><span class="badge badge-q">TBD</span></td><td><span class="badge badge-q">확인 필요</span></td></tr>
-          <tr><td>FBX 원본 (Swim/Fall 포함)</td><td><code>//depot/PlayerPlatform/Character/ODA/Content/AnimationPack/</code></td><td><span class="badge badge-q">TBD</span></td><td><span class="badge badge-q">확인 필요</span></td></tr>
-          <tr><td>Animation meta JSON</td><td>loopStart/End, notify, rootMotion 포함</td><td><span class="badge badge-q">TBD</span></td><td><span class="badge badge-q">확인 필요</span></td></tr>
-          <tr><td>CDN 썸네일 & mesh URL</td><td><code>emote_table</code> 또는 Slack</td><td><span class="badge badge-q">TBD</span></td><td><span class="badge badge-q">확인 필요</span></td></tr>
+          <tr><td>브랜치 빌드 APK</td><td><code>ovdr-8654-anim-emote</code> 브랜치</td><td><span class="badge badge-q">TBD (구 @강현규)</span></td><td><span class="badge badge-q">확인 필요</span></td></tr>
+          <tr><td><code>emote_table.json</code></td><td>Cooker output</td><td>@남정석 / @김상현</td><td><span class="badge badge-q">확인 필요</span></td></tr>
+          <tr><td><code>bundle_table.json</code></td><td>Cooker output</td><td>@남정석 / @김상현</td><td><span class="badge badge-q">확인 필요</span></td></tr>
+          <tr><td><code>animation_table.json</code></td><td>Cooker output</td><td>@남정석</td><td><span class="badge badge-q">확인 필요</span></td></tr>
+          <tr><td>FBX 원본 (Swim/Fall 포함)</td><td><code>//depot/PlayerPlatform/Character/ODA/Content/AnimationPack/</code></td><td>@최정효 / @이재니</td><td><span class="badge badge-q">확인 필요</span></td></tr>
+          <tr><td>Animation meta JSON</td><td>loopStart/End, notify, rootMotion 포함</td><td>@정석영</td><td><span class="badge badge-q">확인 필요</span></td></tr>
+          <tr><td>CDN 썸네일 & mesh URL</td><td><code>emote_table</code> 또는 Slack (#jaeni / #남정석)</td><td>@최정효</td><td><span class="badge badge-q">확인 필요</span></td></tr>
           <tr><td>테스트 계정 (구매 + creator)</td><td>QA 팀 내부</td><td>@최민철</td><td><span class="badge badge-warn">준비 중</span></td></tr>
-          <tr><td>테스트 월드 (네이티브 + UGC)</td><td>Dev 서버</td><td><span class="badge badge-q">TBD</span></td><td><span class="badge badge-q">확인 필요</span></td></tr>
+          <tr><td>테스트 월드 (네이티브 + UGC)</td><td>Dev 서버</td><td>@정석영</td><td><span class="badge badge-q">확인 필요</span></td></tr>
         </tbody>
       </table>
     </div>
@@ -298,13 +298,14 @@ adb logcat | grep -E "OVDR_grpc.*ERROR|Valid target emote does not exist|status.
   <div class="section">
     <div class="section-title">🙋 DRI & Contacts</div>
     <div class="dri-grid">
-      <div class="dri-card"><div class="dri-role">QA 총괄</div><div class="dri-name">@최민철</div></div>
-      <div class="dri-card"><div class="dri-role">기획</div><div class="dri-name">TBD</div></div>
-      <div class="dri-card"><div class="dri-role">Server / 배포</div><div class="dri-name">TBD</div></div>
-      <div class="dri-card"><div class="dri-role">Art</div><div class="dri-name">TBD</div></div>
-      <div class="dri-card"><div class="dri-role">App / Streaming</div><div class="dri-name">TBD</div></div>
-      <div class="dri-card"><div class="dri-role">Unreal</div><div class="dri-name">TBD</div></div>
-      <div class="dri-card"><div class="dri-role">Android</div><div class="dri-name">TBD</div></div>
+      <div class="dri-card"><div class="dri-role">QA 총괄</div><div class="dri-name">@최민철 / @이재니</div></div>
+      <div class="dri-card"><div class="dri-role">기획 확인 (번들명/Swim 범위)</div><div class="dri-name">@이재니</div></div>
+      <div class="dri-card"><div class="dri-role">Cooker / 배포</div><div class="dri-name">@김상현 / @남정석</div></div>
+      <div class="dri-card"><div class="dri-role">Art (FBX / 썸네일)</div><div class="dri-name">@최정효 / @이재니</div></div>
+      <div class="dri-card"><div class="dri-role">App / Streaming</div><div class="dri-name"><span class="badge badge-q">TBD (구 @강현규)</span></div></div>
+      <div class="dri-card"><div class="dri-role">Unreal (마켓 / 커마)</div><div class="dri-name">@정석영</div></div>
+      <div class="dri-card"><div class="dri-role">Unreal (휴머노이드)</div><div class="dri-name">@유현욱</div></div>
+      <div class="dri-card"><div class="dri-role">Android</div><div class="dri-name">@조현철</div></div>
     </div>
   </div>
 
@@ -330,11 +331,11 @@ adb logcat | grep -E "OVDR_grpc.*ERROR|Valid target emote does not exist|status.
         <thead><tr><th>채널</th><th>내용</th></tr></thead>
         <tbody>
           <tr><td><code>JIRA OVDR-8656</code></td><td>TC 결과 + 버그 링크 첨부</td></tr>
-          <tr><td>Slack DM</td><td>BUG-01 기획 확인 → 기획 담당자</td></tr>
-          <tr><td>Slack DM</td><td>BUG-02,04,05,06,08 Android 수정 요청 → Android 담당자</td></tr>
-          <tr><td>Slack DM</td><td>BUG-03,07 Unreal 미리보기 수정 → Unreal 담당자</td></tr>
-          <tr><td>Slack DM</td><td>서버 수정 요청 (이름/가격) → Server 담당자</td></tr>
-          <tr><td>Slack DM</td><td>Spec vs Dev 불일치 확인 → 기획 담당자</td></tr>
+          <tr><td>Slack DM</td><td>BUG-01 기획 확인 → @이재니</td></tr>
+          <tr><td>Slack DM</td><td>BUG-02,04,05,06,08 Android 수정 요청 → @조현철</td></tr>
+          <tr><td>Slack DM</td><td>BUG-03,07 Unreal 미리보기 수정 → @정석영</td></tr>
+          <tr><td>Slack DM</td><td>서버 수정 요청 (이름/가격) → @김상현</td></tr>
+          <tr><td>Slack DM</td><td>Spec vs Dev 불일치 확인 → @이재니</td></tr>
         </tbody>
       </table>
     </div>
@@ -1079,9 +1080,9 @@ adb logcat | grep -E "OVDR_grpc.*ERROR|Valid target emote does not exist|status.
       <li class="action-item">logcat <code>bundle_anim:48</code> 응답의 <code>name</code> 필드 확인</li>
     </ul>
     <ul class="action-list">
-      <li class="action-item">1️⃣ &nbsp; Zombie Pack이 최종 배포에 포함된 것이 맞는지 → 기획 담당자 확인</li>
-      <li class="action-item">2️⃣ &nbsp; 앱 로그의 <code>bundle_anim:49 = Skate</code>가 최종 배포인지, 샘플 잔존인지 → Server 담당자 확인</li>
-      <li class="action-item">3️⃣ &nbsp; <code>bundle_anim:47</code>이 Female인지 Levitation인지 → Server 담당자 확인</li>
+      <li class="action-item">1️⃣ &nbsp; Zombie Pack이 최종 배포에 포함된 것이 맞는지 → @이재니 최종 확인</li>
+      <li class="action-item">2️⃣ &nbsp; 앱 로그의 <code>bundle_anim:49 = Skate</code>가 최종 배포인지, 샘플 잔존인지 → @김상현 확인</li>
+      <li class="action-item">3️⃣ &nbsp; <code>bundle_anim:47</code>이 Female인지 Levitation인지 → @김상현 확인</li>
       <li class="action-item">4️⃣ &nbsp; 확인 후 BUG-01 Close 또는 유지 결정</li>
     </ul>
   </div>
@@ -1122,7 +1123,7 @@ adb logcat | grep -E "OVDR_grpc.*ERROR|Valid target emote does not exist|status.
       <li class="action-item">1️⃣ &nbsp; Customize 탭 전환 시 Marketplace 프리뷰 상태 명시적 정리</li>
       <li class="action-item">2️⃣ &nbsp; Customize 진입 시 실제 저장된 장착 상태 기준으로 UE + UI 동기화</li>
       <li class="action-item">3️⃣ &nbsp; <code>onClickProduct</code> 자동 트리거 제거 → 상태 복원은 별도 로직</li>
-      <li class="action-item">4️⃣ &nbsp; 토스트 노출 조건: Clear 버튼 클릭 시에만 (UX Spec 준수) → Android 담당자</li>
+      <li class="action-item">4️⃣ &nbsp; 토스트 노출 조건: Clear 버튼 클릭 시에만 (UX Spec 준수) → @조현철</li>
     </ul>
   </div>
 
@@ -1220,7 +1221,7 @@ adb logcat | grep -E "OVDR_grpc.*ERROR|Valid target emote does not exist|status.
       Figma에는 <strong>Stylish Animation Pack</strong> (270)이 구매 가능 번들로 존재. 개발 빌드에는 <strong>Default Animations Pack</strong> (무료)만 존재. "Stylish"가 별도 유료 번들이라면 → 아직 미구현? "Stylish"가 "Default"의 스토어용 이름이라면 → 이름 불일치.
     </div>
     <ul class="action-list">
-      <li class="action-item">→ 기획 담당자 확인 필요</li>
+      <li class="action-item">→ 확인 필요 담당자: @이재니</li>
     </ul>
   </div>
 
@@ -1232,9 +1233,9 @@ adb logcat | grep -E "OVDR_grpc.*ERROR|Valid target emote does not exist|status.
       특정 코스튬 조합에서 림라이트/코스튬 렌더링 이슈 발생 보고. 아트/엔진 로그(<code>GetCostumeObjectPath</code>) 수집이 필요한 것으로 명시됨. 구체적인 재현 조건 미확인.
     </div>
     <ul class="action-list">
-      <li class="action-item">1️⃣ &nbsp; 재현 조건 코스튬 조합 확인 → Art / 기획 담당자</li>
+      <li class="action-item">1️⃣ &nbsp; 재현 조건 코스튬 조합 확인 → @최정효 / @이재니</li>
       <li class="action-item">2️⃣ &nbsp; 재현 후 Client + Server 로그 수집 (<code>GetCostumeObjectPath</code> 키워드)</li>
-      <li class="action-item">3️⃣ &nbsp; 로그 → Unreal 담당자 전달</li>
+      <li class="action-item">3️⃣ &nbsp; 로그 → @정석영 (엔진) / @유현욱 (휴머노이드) 전달</li>
     </ul>
   </div>
 
@@ -1249,9 +1250,9 @@ adb logcat | grep -E "OVDR_grpc.*ERROR|Valid target emote does not exist|status.
       <code>bundle_anim:47</code>이 Female인지 Levitation인지 불명확.
     </div>
     <ul class="action-list">
-      <li class="action-item">→ <code>bundle_anim:47</code> 이름 확인 → Server 담당자</li>
-      <li class="action-item">→ Skate Pack이 최종 배포에 포함됐는지 → 기획 / Server 담당자</li>
-      <li class="action-item">→ Female / Levitation의 specId 확인 → Server 담당자</li>
+      <li class="action-item">→ <code>bundle_anim:47</code> 이름 확인 → @김상현</li>
+      <li class="action-item">→ Skate Pack이 최종 배포에 포함됐는지 → @이재니 / @남정석</li>
+      <li class="action-item">→ Female / Levitation의 specId 확인 → @김상현</li>
     </ul>
   </div>
 
