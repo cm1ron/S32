@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Overdare — Hub AIT QA Dashboard</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #222536;
+    --border: #2e3248;
+    --accent: #e05285;
+    --accent2: #5c8df6;
+    --green: #3ecf8e;
+    --red: #f66b6b;
+    --yellow: #f5c542;
+    --orange: #f79a3e;
+    --text: #e2e4ef;
+    --muted: #7a7f9a;
+    --code-bg: #12141e;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', -apple-system, sans-serif; font-size: 14px; line-height: 1.6; }
+
+  .header { background: linear-gradient(135deg, #1a1d27 0%, #12141e 100%); border-bottom: 1px solid var(--border); padding: 24px 32px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .header-badge { background: var(--accent); color: #fff; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 4px; letter-spacing: 0.5px; }
+  .header h1 { font-size: 20px; font-weight: 700; color: #fff; }
+  .header-meta { margin-left: auto; display: flex; gap: 12px; flex-wrap: wrap; }
+  .meta-chip { background: var(--surface2); border: 1px solid var(--border); padding: 4px 10px; border-radius: 6px; font-size: 12px; color: var(--muted); }
+  .meta-chip span { color: var(--text); font-weight: 600; }
+
+  .tabs { display: flex; gap: 2px; padding: 0 32px; background: var(--surface); border-bottom: 1px solid var(--border); overflow-x: auto; }
+  .tab { padding: 12px 18px; cursor: pointer; font-size: 13px; font-weight: 500; color: var(--muted); border-bottom: 2px solid transparent; transition: all 0.15s; white-space: nowrap; }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  .content { padding: 28px 32px; max-width: 1200px; }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  .section { margin-bottom: 32px; }
+  .section-title { font-size: 15px; font-weight: 700; color: #fff; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 20px; margin-bottom: 14px; }
+
+  .badge { font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 4px; letter-spacing: 0.3px; }
+  .badge-p0 { background: rgba(246,107,107,0.15); color: var(--red); border: 1px solid rgba(246,107,107,0.3); }
+  .badge-p1 { background: rgba(245,197,66,0.15); color: var(--yellow); border: 1px solid rgba(245,197,66,0.3); }
+  .badge-p2 { background: rgba(122,127,154,0.15); color: var(--muted); border: 1px solid rgba(122,127,154,0.3); }
+  .badge-ok { background: rgba(62,207,142,0.15); color: var(--green); border: 1px solid rgba(62,207,142,0.3); }
+  .badge-warn { background: rgba(247,154,62,0.15); color: var(--orange); border: 1px solid rgba(247,154,62,0.3); }
+  .badge-info { background: rgba(92,141,246,0.15); color: var(--accent2); border: 1px solid rgba(92,141,246,0.3); }
+
+  .tbl-wrap { overflow-x: auto; border-radius: 8px; border: 1px solid var(--border); }
+  table { width: 100%; border-collapse: collapse; }
+  thead { background: var(--surface2); }
+  th { padding: 10px 14px; text-align: left; font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  td { padding: 10px 14px; border-bottom: 1px solid var(--border); font-size: 13px; vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(255,255,255,0.02); }
+  code { background: var(--code-bg); color: #a5b4fc; padding: 2px 6px; border-radius: 4px; font-family: 'JetBrains Mono', 'Fira Code', monospace; font-size: 12px; }
+
+  .checklist { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+  .checklist li { display: flex; align-items: flex-start; gap: 10px; padding: 8px 12px; border-radius: 6px; background: var(--surface2); border: 1px solid var(--border); }
+  .checklist li:hover { border-color: var(--accent); }
+  .check-box { width: 16px; height: 16px; border: 2px solid var(--border); border-radius: 4px; flex-shrink: 0; margin-top: 2px; cursor: pointer; transition: all 0.1s; }
+  .check-box.checked { background: var(--accent); border-color: var(--accent); }
+  .check-label { flex: 1; color: var(--text); cursor: pointer; font-size: 13px; }
+  .check-label .tc-id { color: var(--accent); font-weight: 700; margin-right: 6px; font-size: 12px; }
+
+  .steps { border-radius: 8px; overflow: hidden; border: 1px solid var(--border); }
+  .step { display: grid; grid-template-columns: 36px 1fr 1fr 1fr; gap: 0; border-bottom: 1px solid var(--border); }
+  .step:last-child { border-bottom: none; }
+  .step-num { background: var(--surface2); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px; color: var(--accent); border-right: 1px solid var(--border); padding: 10px 0; }
+  .step-cell { padding: 10px 14px; font-size: 13px; border-right: 1px solid var(--border); }
+  .step-cell:last-child { border-right: none; }
+  .step-cell strong { color: #fff; }
+  .step-header .step-num { background: transparent; color: var(--muted); font-size: 11px; font-weight: 600; text-transform: uppercase; }
+  .step-header .step-cell { color: var(--muted); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; background: var(--surface2); }
+  .precond { background: rgba(224,82,133,0.08); border: 1px solid rgba(224,82,133,0.2); border-radius: 8px; padding: 10px 14px; margin: 14px 0 10px; font-size: 13px; color: var(--accent); }
+  .precond::before { content: '📌 전제 조건  '; font-weight: 700; }
+
+  .flow-box { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 24px; margin-bottom: 14px; }
+  .flow-steps { display: flex; align-items: center; gap: 0; flex-wrap: wrap; justify-content: center; }
+  .flow-step { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 12px 20px; text-align: center; min-width: 160px; }
+  .flow-step.active { border-color: var(--accent); background: rgba(224,82,133,0.1); }
+  .flow-step-num { font-size: 11px; color: var(--muted); font-weight: 600; margin-bottom: 4px; }
+  .flow-step-title { font-size: 14px; font-weight: 700; color: #fff; }
+  .flow-arrow { color: var(--muted); font-size: 20px; padding: 0 8px; flex-shrink: 0; }
+
+  .policy-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+  .policy-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
+  .policy-card-title { font-weight: 700; color: #fff; margin-bottom: 8px; font-size: 13px; display: flex; align-items: center; gap: 6px; }
+  .policy-card p { font-size: 13px; color: var(--muted); line-height: 1.5; }
+  .policy-card .val { color: var(--accent); font-weight: 700; }
+
+  .prompt-example { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px; margin: 6px 0; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #a5b4fc; line-height: 1.5; }
+
+  .stat-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+  .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px 20px; flex: 1; min-width: 160px; text-align: center; }
+  .stat-val { font-size: 28px; font-weight: 800; color: var(--accent); }
+  .stat-label { font-size: 12px; color: var(--muted); margin-top: 4px; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <span class="header-badge">HUB AIT</span>
+  <h1>허브 AIT 생성 기능 QA Dashboard</h1>
+  <div class="header-meta">
+    <div class="meta-chip">JIRA <span>OVDR-9591</span></div>
+    <div class="meta-chip">PRD <span>[PRD] 허브 AIT 생성 기능 추가</span></div>
+    <div class="meta-chip">Status <span>IN PROGRESS</span></div>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('overview')">Overview</div>
+  <div class="tab" onclick="switchTab('checklist')">QA Checklist</div>
+  <div class="tab" onclick="switchTab('scenarios')">Test Scenarios</div>
+  <div class="tab" onclick="switchTab('policy')">생성 정책</div>
+  <div class="tab" onclick="switchTab('prompts')">Style Presets</div>
+  <div class="tab" onclick="switchTab('errors')">에러/엣지케이스</div>
+</div>
+
+<div class="content">
+
+<!-- ==================== OVERVIEW ==================== -->
+<div class="tab-panel active" id="panel-overview">
+
+  <!-- Stats -->
+  <div class="stat-row">
+    <div class="stat-card"><div class="stat-val">5</div><div class="stat-label">AIT 파츠 종류</div></div>
+    <div class="stat-card"><div class="stat-val">5회/일</div><div class="stat-label">기본 생성권</div></div>
+    <div class="stat-card"><div class="stat-val">15~40s</div><div class="stat-label">생성 목표 시간</div></div>
+    <div class="stat-card"><div class="stat-val">500자</div><div class="stat-label">프롬프트 제한</div></div>
+    <div class="stat-card"><div class="stat-val">3종</div><div class="stat-label">Style References</div></div>
+  </div>
+
+  <!-- Goal -->
+  <div class="section">
+    <div class="section-title">🎯 목표</div>
+    <div class="card">
+      <p>1. Avatar Item 1건 제작~판매 End-to-End 소요시간: <strong style="color:var(--accent)">60분 → 5분 이하</strong></p>
+      <p style="margin-top:6px">2. 자연어 프롬프트 입력 후 <strong style="color:var(--accent)">15~40초</strong> 이내 UV 텍스처 1개 생성</p>
+    </div>
+  </div>
+
+  <!-- Flow -->
+  <div class="section">
+    <div class="section-title">🗺️ 전체 플로우</div>
+    <div class="flow-box">
+      <div class="flow-steps">
+        <div class="flow-step active">
+          <div class="flow-step-num">Step 1</div>
+          <div class="flow-step-title">Select template</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:4px">5종 선택</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">
+          <div class="flow-step-num">Step 1.5</div>
+          <div class="flow-step-title">Choose Method</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:4px">AI Generate / Upload</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step active">
+          <div class="flow-step-num">Step 2</div>
+          <div class="flow-step-title">AI Generate</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:4px">프롬프트 → 텍스처</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">
+          <div class="flow-step-num">Step 3</div>
+          <div class="flow-step-title">Provide Info</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:4px">이름/가격/태그</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">
+          <div class="flow-step-num">Step 4</div>
+          <div class="flow-step-title">Complete</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:4px">심사 → 판매</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DRI -->
+  <div class="section">
+    <div class="section-title">🙋 DRI</div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>역할</th><th>담당자</th><th>JIRA</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td>PO / 기획</td><td>@Jaeni Lee (이재니)</td><td><code>OVDR-9591</code></td><td><span class="badge badge-ok">DONE</span></td></tr>
+          <tr><td>디자인</td><td>@Namkyung Oh (오남경)</td><td><code>OVDR-9592</code></td><td><span class="badge badge-ok">DONE</span></td></tr>
+          <tr><td>FE</td><td>@Jonghyuk Lee (이종혁)</td><td><code>OVDR-9593</code></td><td><span class="badge badge-warn">BACKLOG</span></td></tr>
+          <tr><td>BE</td><td>@Uhyun Park (박의현)</td><td><code>OVDR-9594</code></td><td><span class="badge badge-warn">BACKLOG</span></td></tr>
+          <tr><td>Unreal</td><td>@Seokyoung Jeong (정석영)</td><td><code>OVDR-9670</code></td><td><span class="badge badge-warn">BACKLOG</span></td></tr>
+          <tr><td>QA</td><td>@Mincheol Choi (최민철)</td><td>—</td><td><span class="badge badge-info">WAITING</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Key Features -->
+  <div class="section">
+    <div class="section-title">📋 Key Features</div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>No</th><th>제목</th><th>내용</th><th>우선순위</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td>인지</td><td>신규 AIT 5종(Head/Tshirt/Pants/Gloves/Boots)을 이미지 업로드/AI 생성 방식으로 제작 가능함 인지</td><td><span class="badge badge-p0">P0</span></td></tr>
+          <tr><td>2</td><td>이미지 업로드</td><td>신규 AIT 5종을 기존 수작업 업로드 방식으로 제작 (기존 100% 유지)</td><td><span class="badge badge-p0">P0</span></td></tr>
+          <tr><td>3</td><td>AI 생성</td><td>자연어 프롬프트만으로 텍스처 생성</td><td><span class="badge badge-p0">P0</span></td></tr>
+          <tr><td>4</td><td>생성 진행</td><td>생성 진행 인지 가능, 중복 생성 불가</td><td><span class="badge badge-p0">P0</span></td></tr>
+          <tr><td>5</td><td>생성 결과 확인</td><td>결과 확인 → 확정 or 프롬프트 수정 후 재생성</td><td><span class="badge badge-p0">P0</span></td></tr>
+          <tr><td>6</td><td>판매</td><td>AI 텍스처 코스튬을 기존과 동일하게 마켓플레이스 판매</td><td><span class="badge badge-p0">P0</span></td></tr>
+          <tr><td>7</td><td>관리</td><td>My Contents에서 AI 생성 코스튬 관리 (도안 수정 불가, AI 아이콘 표시)</td><td><span class="badge badge-p0">P0</span></td></tr>
+          <tr><td>8</td><td>TBD 에디터</td><td>생성된 이미지 편집 기능 (향후 대응)</td><td><span class="badge badge-p1">P1</span></td></tr>
+          <tr><td>9</td><td>TBD AI 생성 과금</td><td>생성 횟수 소진 시 BLUC 추가 구매 (1,000 BLUC = 5회)</td><td><span class="badge badge-p1">P1</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== QA CHECKLIST ==================== -->
+<div class="tab-panel" id="panel-checklist">
+
+  <div class="section">
+    <div class="section-title">✅ TC-1. 템플릿 선택 & 방식 선택 (P0)</div>
+    <ul class="checklist">
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">1-1</span> Hub 진입 → AIT 5종(Head/Tshirt/Pants/Gloves/Boots) 템플릿 노출 확인</div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">1-2</span> 각 템플릿에 <strong>NEW</strong> 뱃지 + <strong>AI</strong> 아이콘 표시</div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">1-3</span> (구) 템플릿 Hub에서 <strong>hide</strong> 확인 (신규 5종 외 미노출)</div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">1-4</span> (구) 템플릿으로 제작된 판매 중 아이템 → Marketplace에서 <strong>유지</strong> 확인</div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">1-5</span> 템플릿 클릭 → "Choose How to Create Your Item" 모달 노출</div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">1-6</span> 모달: AI Generate / Upload Image 2개 옵션 노출</div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">1-7</span> 아무것도 미선택 시 → <strong>Next 버튼 비활성화</strong> (회색)</div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">1-8</span> AI Generate 선택 시 → <strong>Next 버튼 활성화</strong> (흰색)</div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">1-9</span> Upload Image 선택 → 기존 수작업 업로드 플로우 100% 동일 진입</div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">1-10</span> Upload Image: UV 템플릿 다운로드, 예제 이미지 다운로드, 좌측 3D 프리뷰 정상 동작</div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">1-11</span> 모달 X 버튼 → 모달 닫힘, 템플릿 선택 화면 복귀</div></li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <div class="section-title">✅ TC-2. AI Generate — 프롬프트 입력 (P0)</div>
+    <ul class="checklist">
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">2-1</span> AI Generate 진입 → Step 2 "AI Generate" 스텝 표시 확인</div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">2-2</span> 좌측: 선택한 파츠의 3D 프리뷰 정상 표시</div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">2-3</span> 우측: "AI-Powered Creation" 패널 노출</div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">2-4</span> Prompt placeholder: <code>"Describe the style you want..."</code></div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">2-5</span> Prompt 최대 <strong>500자</strong> 제한 → 500자 초과 입력 불가</div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">2-6</span> 글자수 카운터 정상 표시 (예: <code>81/500</code>)</div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">2-7</span> Style References 3종 노출: <strong>Anime High School / KPOP Star / Gyaru</strong></div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">2-8</span> Style Reference 클릭 → 예제 프롬프트 자동 입력 + 3D 프리뷰에 예제 텍스처 적용</div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">2-9</span> Style Reference 클릭 → <strong>Generate 버튼 활성화</strong></div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">2-10</span> Generate 버튼에 잔여 횟수 표시 (예: <code>5 left</code>)</div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">2-11</span> 이탈 경고 배너 상시 노출: "Leaving this page or refreshing will cancel the generation..."</div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">2-12</span> 하단 Back / Next 버튼 정상 동작</div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">2-13</span> 빈 프롬프트 상태에서 Generate 버튼 동작 확인 (비활성화 or 에러 처리)</div></li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <div class="section-title">✅ TC-3. AI Generate — 생성 & 로딩 (P0)</div>
+    <ul class="checklist">
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">3-1</span> Generate 클릭 → 로딩 스피너 + "Generating the image may take up to 1 minute" 메시지</div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">3-2</span> Generate 클릭 시 잔여 횟수 <strong>즉시 1 차감</strong> (예: 5→4)</div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">3-3</span> 생성 중 프롬프트 수정 <strong>불가</strong></div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">3-4</span> 생성 중 Style References 클릭 <strong>불가</strong></div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">3-5</span> 생성 중 Generate 버튼 <strong>비활성화</strong> (중복 생성 방지)</div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">3-6</span> 생성 중 Back 버튼 클릭 → 페이지 벗어남 경고 모달 노출</div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">3-7</span> 생성 중 브라우저 X 버튼 → 시스템 경고 모달 노출</div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">3-8</span> 생성 완료 → 결과 텍스처가 좌측 3D 프리뷰에 자동 적용</div></li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <div class="section-title">✅ TC-4. AI Generate — 에러 처리 (P0)</div>
+    <ul class="checklist">
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">4-1</span> 생성 실패 → "Generation failed. Please try again." + Retry 버튼</div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">4-2</span> 생성 실패 시 횟수 <strong>미차감</strong> 확인</div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">4-3</span> 타임아웃 → "Taking longer than expected. Please try again." + Retry 버튼</div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">4-4</span> 타임아웃 시 횟수 <strong>미차감</strong> 확인</div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">4-5</span> 사용자 취소 → "Cancel generation and exit?" + Cancel and Exit (빨간 버튼)</div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">4-6</span> 사용자 취소 시 횟수 <strong>차감됨</strong> 확인</div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">4-7</span> Retry 버튼 클릭 → 에러 모달 닫히고 프롬프트 입력 상태 복귀</div></li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <div class="section-title">✅ TC-5. AI Generate — 결과 확인 (P0)</div>
+    <ul class="checklist">
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">5-1</span> 생성 완료 → "Your Results" 영역에 UV 텍스처 이미지 표시</div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">5-2</span> 결과 이미지가 좌측 3D 프리뷰에 자동 적용</div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">5-3</span> 프롬프트 영역에 현재 결과물 생성 프롬프트 유지</div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">5-4</span> 프롬프트 수정 후 재생성 가능</div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">5-5</span> 결과 2개 이상 시 → <code>&lt;</code> <code>&gt;</code> 화살표로 이전 결과 탐색 가능</div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">5-6</span> 이전 결과 선택 시 → 해당 프롬프트 & 3D 프리뷰 동기화</div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">5-7</span> 2번째 생성 결과 시 툴팁: "You can go back to your previous design."</div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">5-8</span> 결과 카운터 정상 표시 (예: <code>1/1</code>, <code>1/2</code>, <code>3/5</code>)</div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">5-9</span> Next 버튼 <strong>빨간색으로 활성화</strong> (결과 있을 때)</div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">5-10</span> Next 클릭 → Step 3 (Provide Information)으로 정상 진행</div></li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <div class="section-title">✅ TC-6. 생성 횟수 관리 (P0)</div>
+    <ul class="checklist">
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">6-1</span> 초기 생성 가능 횟수 <strong>5회</strong> 확인</div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">6-2</span> 매 Generate 클릭 시 1회씩 차감 (5→4→3→2→1→0)</div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">6-3</span> 잔여 0회 → Generate 버튼 <strong>비활성화</strong> (disable)</div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">6-4</span> 잔여 0회 → 기존 생성 결과 중 선택은 가능</div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">6-5</span> 매일 <strong>UTC 0시</strong>에 최대 5회까지 충전 확인</div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">6-6</span> 남은 횟수 이월 확인 (예: 3회 남은 상태 → UTC 0시 후 5회)</div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">6-7</span> Dev/Staging 환경 → <strong>무제한</strong> 사용 가능 확인</div></li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <div class="section-title">✅ TC-7. 판매 & 관리 (P0)</div>
+    <ul class="checklist">
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">7-1</span> Step 3: Name / Category / Sale (On/Off) / Price (min 50 BLUC) / Tag (최대 5개) 입력 가능</div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">7-2</span> Step 4: Complete → 심사 프로세스 기존과 동일</div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">7-3</span> My Contents에서 AI 생성 아이템 노출</div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">7-4</span> AI 생성 아이템 도안 썸네일에 <strong>AI 아이콘</strong> 표시</div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">7-5</span> AI 생성 아이템 메타데이터 수정 시 → 도안(template) 탭 <strong>제거</strong> (수정 불가)</div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">7-6</span> App Marketplace에서 AI 생성 아이템 정상 판매</div></li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <div class="section-title">✅ TC-8. BM 과금 (P1)</div>
+    <ul class="checklist">
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">8-1</span> 생성권 0회 상태에서 Generate → <strong>구매 유도 팝업</strong> 노출</div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">8-2</span> 추가 생성권 가격: <strong>1,000 Earned BLUC = 5회</strong></div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">8-3</span> BLUC 잔액 충분 → 결제 모달 → 결제 완료 → 잔여 5회로 증가</div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">8-4</span> BLUC 잔액 부족 → 구매 불가 안내 모달</div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">8-5</span> 과금 후 작업 페이지 <strong>유지</strong> (이탈 없음)</div></li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <div class="section-title">✅ TC-9. 모바일 & 구 템플릿 (P0)</div>
+    <ul class="checklist">
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">9-1</span> 모바일 환경 → Hub AIT 진입 <strong>차단</strong> 확인</div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">9-2</span> 구 템플릿으로 이미 제작·판매 중인 아이템 → My Contents에서 <strong>정상 노출</strong></div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">9-3</span> 구 템플릿 <strong>추가 제작 불가</strong> 확인</div></li>
+    </ul>
+  </div>
+
+</div>
+
+<!-- ==================== TEST SCENARIOS ==================== -->
+<div class="tab-panel" id="panel-scenarios">
+
+  <div class="section">
+    <div class="section-title">📝 S-1. AI Generate E2E: 템플릿 선택 → 텍스처 생성 → 판매 완료</div>
+    <div class="precond">크리에이터 계정, 생성 횟수 5회 (초기 상태)</div>
+    <div class="steps">
+      <div class="step step-header"><div class="step-num">#</div><div class="step-cell">행동</div><div class="step-cell">기대 결과</div><div class="step-cell">확인 포인트</div></div>
+      <div class="step"><div class="step-num">1</div><div class="step-cell">Hub 진입 → Pants 템플릿 클릭</div><div class="step-cell">"Choose How to Create Your Item" 모달 노출</div><div class="step-cell">5종 중 Pants 선택 가능</div></div>
+      <div class="step"><div class="step-num">2</div><div class="step-cell">AI Generate 선택 → Next</div><div class="step-cell">Step 2 "AI Generate" 화면 진입</div><div class="step-cell">3D 프리뷰: Pants 기본 메시</div></div>
+      <div class="step"><div class="step-num">3</div><div class="step-cell">Style Reference "KPOP Star" 클릭</div><div class="step-cell">예제 프롬프트 자동 입력 + 예제 텍스처 3D 적용</div><div class="step-cell">프롬프트 자동 입력 확인</div></div>
+      <div class="step"><div class="step-num">4</div><div class="step-cell">프롬프트 수정 후 Generate 클릭</div><div class="step-cell">로딩 표시, 횟수 5→4, 프롬프트 수정 불가</div><div class="step-cell"><code>5 left</code> → <code>4 left</code></div></div>
+      <div class="step"><div class="step-num">5</div><div class="step-cell">생성 완료 대기 (15~40초)</div><div class="step-cell">Your Results에 UV 텍스처 노출 + 3D 프리뷰 적용</div><div class="step-cell">결과 <code>1/1</code> 표시</div></div>
+      <div class="step"><div class="step-num">6</div><div class="step-cell">Next 클릭 (빨간 버튼)</div><div class="step-cell">Step 3 (Provide Information) 진입</div><div class="step-cell">텍스처 확정</div></div>
+      <div class="step"><div class="step-num">7</div><div class="step-cell">Name/Price/Tag 입력 → 완료</div><div class="step-cell">Step 4 (Complete) → 심사 대기</div><div class="step-cell">기존 플로우와 동일</div></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">📝 S-2. 프롬프트 재생성 & 결과 탐색</div>
+    <div class="precond">크리에이터 계정, 생성 횟수 5회</div>
+    <div class="steps">
+      <div class="step step-header"><div class="step-num">#</div><div class="step-cell">행동</div><div class="step-cell">기대 결과</div><div class="step-cell">확인 포인트</div></div>
+      <div class="step"><div class="step-num">1</div><div class="step-cell">Tshirt 선택 → AI Generate → 프롬프트 A 입력 → Generate</div><div class="step-cell">결과 1/1 노출, 횟수 4 left</div><div class="step-cell">첫 번째 결과</div></div>
+      <div class="step"><div class="step-num">2</div><div class="step-cell">프롬프트 B로 수정 → Generate</div><div class="step-cell">결과 2/2 노출, 횟수 3 left, 툴팁 노출</div><div class="step-cell">"You can go back to your previous design."</div></div>
+      <div class="step"><div class="step-num">3</div><div class="step-cell">&lt; 화살표 클릭</div><div class="step-cell">결과 1/2로 이동, 프롬프트 A 복원, 3D 프리뷰 변경</div><div class="step-cell">이전 결과 프롬프트 동기화</div></div>
+      <div class="step"><div class="step-num">4</div><div class="step-cell">&gt; 화살표 클릭</div><div class="step-cell">결과 2/2로 복귀</div><div class="step-cell">최신 결과 프롬프트 동기화</div></div>
+      <div class="step"><div class="step-num">5</div><div class="step-cell">3회 더 생성 (총 5회 소진)</div><div class="step-cell">결과 5/5, 횟수 0 left, Generate 비활성화</div><div class="step-cell"><code>0 left</code> 표시</div></div>
+      <div class="step"><div class="step-num">6</div><div class="step-cell">이전 결과 중 원하는 것 선택 → Next</div><div class="step-cell">선택한 텍스처로 Step 3 진행</div><div class="step-cell">0회여도 기존 결과 선택 가능</div></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">📝 S-3. 에러 복구 시나리오</div>
+    <div class="precond">크리에이터 계정, 생성 횟수 5회</div>
+    <div class="steps">
+      <div class="step step-header"><div class="step-num">#</div><div class="step-cell">행동</div><div class="step-cell">기대 결과</div><div class="step-cell">확인 포인트</div></div>
+      <div class="step"><div class="step-num">1</div><div class="step-cell">프롬프트 입력 → Generate → 서버 에러 발생</div><div class="step-cell">"Generation failed" 모달 + Retry 버튼</div><div class="step-cell">횟수 <strong>미차감</strong> (5 유지)</div></div>
+      <div class="step"><div class="step-num">2</div><div class="step-cell">Retry 클릭</div><div class="step-cell">모달 닫힘, 프롬프트 유지, 재생성 가능</div><div class="step-cell">프롬프트 보존 확인</div></div>
+      <div class="step"><div class="step-num">3</div><div class="step-cell">Generate → 타임아웃 발생</div><div class="step-cell">"Taking longer than expected" 모달</div><div class="step-cell">횟수 <strong>미차감</strong> (5 유지)</div></div>
+      <div class="step"><div class="step-num">4</div><div class="step-cell">Generate → 생성 중 Back 클릭</div><div class="step-cell">"Cancel generation and exit?" 모달</div><div class="step-cell">—</div></div>
+      <div class="step"><div class="step-num">5</div><div class="step-cell">Cancel and Exit 클릭</div><div class="step-cell">생성 취소, 이전 화면 복귀</div><div class="step-cell">횟수 <strong>차감됨</strong> (5→4)</div></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">📝 S-4. Upload Image 플로우 (기존 유지 확인)</div>
+    <div class="precond">크리에이터 계정</div>
+    <div class="steps">
+      <div class="step step-header"><div class="step-num">#</div><div class="step-cell">행동</div><div class="step-cell">기대 결과</div><div class="step-cell">확인 포인트</div></div>
+      <div class="step"><div class="step-num">1</div><div class="step-cell">Head 템플릿 클릭 → Upload Image 선택 → Next</div><div class="step-cell">기존 수작업 업로드 화면 진입</div><div class="step-cell">AI 관련 UI 미노출</div></div>
+      <div class="step"><div class="step-num">2</div><div class="step-cell">UV 템플릿 다운로드</div><div class="step-cell">정상 다운로드</div><div class="step-cell">기존과 동일 사이즈 규격</div></div>
+      <div class="step"><div class="step-num">3</div><div class="step-cell">이미지 업로드</div><div class="step-cell">좌측 3D 프리뷰에 즉시 반영</div><div class="step-cell">업로드 즉시 반영</div></div>
+      <div class="step"><div class="step-num">4</div><div class="step-cell">Step 3~4 완료</div><div class="step-cell">기존 플로우와 100% 동일</div><div class="step-cell">—</div></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">📝 S-5. BM 과금 시나리오 (P1)</div>
+    <div class="precond">크리에이터 계정, 생성 횟수 0회, BLUC 보유</div>
+    <div class="steps">
+      <div class="step step-header"><div class="step-num">#</div><div class="step-cell">행동</div><div class="step-cell">기대 결과</div><div class="step-cell">확인 포인트</div></div>
+      <div class="step"><div class="step-num">1</div><div class="step-cell">Generate 버튼 비활성화 상태 확인</div><div class="step-cell"><code>0 left</code> 표시, 버튼 disable</div><div class="step-cell">—</div></div>
+      <div class="step"><div class="step-num">2</div><div class="step-cell">Generate 클릭 시도</div><div class="step-cell">구매 유도 팝업 노출 (1,000 BLUC = 5회)</div><div class="step-cell">가격 정확히 표시</div></div>
+      <div class="step"><div class="step-num">3</div><div class="step-cell">구매 진행</div><div class="step-cell">결제 완료, 잔여 5회로 증가, 작업 페이지 유지</div><div class="step-cell"><code>5 left</code> 복원</div></div>
+      <div class="step"><div class="step-num">4</div><div class="step-cell">BLUC 부족 상태에서 구매 시도</div><div class="step-cell">구매 불가 안내 모달</div><div class="step-cell">크래시 없음</div></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ==================== POLICY ==================== -->
+<div class="tab-panel" id="panel-policy">
+
+  <div class="section">
+    <div class="section-title">⚙️ 생성 정책</div>
+    <div class="policy-grid">
+      <div class="policy-card">
+        <div class="policy-card-title">🎯 생성 결과</div>
+        <p><span class="val">1회당 1장</span> (다중 결과 비교는 향후 대응)</p>
+      </div>
+      <div class="policy-card">
+        <div class="policy-card-title">🔢 기본 생성권</div>
+        <p><span class="val">5회/일</span> (초기값, 어드민에서 조정 가능)</p>
+      </div>
+      <div class="policy-card">
+        <div class="policy-card-title">🔄 충전 시점</div>
+        <p>매일 <span class="val">UTC 0시</span>에 최대 5회까지 보충<br>남은 횟수는 이월, 5회 미만이면 5회로 보충</p>
+      </div>
+      <div class="policy-card">
+        <div class="policy-card-title">⚡ Generate 클릭 시</div>
+        <p><span class="val">즉시 횟수 차감</span> (네트워크 에러 대응 X)</p>
+      </div>
+      <div class="policy-card">
+        <div class="policy-card-title">❌ 생성 실패 시</div>
+        <p>횟수 <span class="val">미차감</span></p>
+      </div>
+      <div class="policy-card">
+        <div class="policy-card-title">🚪 사용자 취소 시</div>
+        <p>횟수 <span class="val">차감됨</span> + 결과 소실</p>
+      </div>
+      <div class="policy-card">
+        <div class="policy-card-title">🧪 Dev / Staging</div>
+        <p><span class="val">무제한</span> 사용 가능</p>
+      </div>
+      <div class="policy-card">
+        <div class="policy-card-title">📱 모바일</div>
+        <p>현재 <span class="val">진입 차단</span> (향후 대응)</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">💰 BM 과금 정책 (P1)</div>
+    <div class="policy-grid">
+      <div class="policy-card">
+        <div class="policy-card-title">💎 추가 생성권</div>
+        <p><span class="val">1,000 Earned BLUC = 5회</span></p>
+      </div>
+      <div class="policy-card">
+        <div class="policy-card-title">🛒 구매 트리거</div>
+        <p>생성권 0인 상태에서 Generate 클릭 → 구매 유도 팝업</p>
+      </div>
+      <div class="policy-card">
+        <div class="policy-card-title">🚫 BLUC 부족</div>
+        <p>구매 불가 안내 모달</p>
+      </div>
+      <div class="policy-card">
+        <div class="policy-card-title">✅ 과금 후</div>
+        <p>작업 페이지 유지, 잔여 <span class="val">5회</span>로 증가</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">🔒 생성 중 금지 액션</div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>액션</th><th>상태</th><th>비고</th></tr></thead>
+        <tbody>
+          <tr><td>프롬프트 수정</td><td><span class="badge badge-p0">금지</span></td><td>생성 완료 후 수정 가능</td></tr>
+          <tr><td>Style References 클릭</td><td><span class="badge badge-p0">금지</span></td><td>—</td></tr>
+          <tr><td>재생성 (Generate)</td><td><span class="badge badge-p0">금지</span></td><td>중복 생성 방지</td></tr>
+          <tr><td>Back 버튼</td><td><span class="badge badge-warn">경고 모달</span></td><td>이탈 시 횟수 차감 + 결과 소실</td></tr>
+          <tr><td>브라우저 X 버튼</td><td><span class="badge badge-warn">시스템 경고</span></td><td>브라우저 종속</td></tr>
+          <tr><td>새로고침</td><td><span class="badge badge-warn">경고</span></td><td>이탈 시 횟수 차감 + 결과 소실</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">📦 구 템플릿 정책</div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>영역</th><th>정책</th></tr></thead>
+        <tbody>
+          <tr><td>Hub 템플릿 목록</td><td>신규 AIT 5종 외 전체 <strong>hide</strong></td></tr>
+          <tr><td>My Contents</td><td>구 템플릿으로 제작된 아이템 <strong>그대로 노출</strong></td></tr>
+          <tr><td>App Marketplace</td><td>구 템플릿 판매 중인 아이템 <strong>판매 유지</strong></td></tr>
+          <tr><td>추가 제작</td><td><strong>불가</strong></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== STYLE PRESETS ==================== -->
+<div class="tab-panel" id="panel-prompts">
+
+  <div class="section">
+    <div class="section-title">🎨 Style References — 파츠별 예제 프롬프트</div>
+    <p style="color:var(--muted);margin-bottom:20px">프리셋 클릭 시 아래 프롬프트가 입력창에 자동 입력됩니다.</p>
+
+    <!-- Head -->
+    <div class="card">
+      <h3 style="color:#fff;margin-bottom:12px">🧢 Head</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Style</th><th>프롬프트</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Anime High School</strong></td><td><div class="prompt-example">Soft anime-style high school student look. Natural black hair, slightly layered cut, clean shading, subtle highlights, youthful and neat appearance. Smooth cel-shaded texture, bright and fresh tone.</div></td></tr>
+            <tr><td><strong>KPOP Star</strong></td><td><div class="prompt-example">Trendy idol hairstyle with soft ash brown color, glossy shine, slightly tousled styling. Clean gradient shading, stage-ready polished texture, high detail hair strands.</div></td></tr>
+            <tr><td><strong>Gyaru</strong></td><td><div class="prompt-example">Voluminous light brown hair with heavy curls and bangs. Strong highlights, glossy shine, bold shading contrast, flashy and dramatic anime texture style.</div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Tshirt -->
+    <div class="card">
+      <h3 style="color:#fff;margin-bottom:12px">👕 Tshirt</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Style</th><th>프롬프트</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Anime High School</strong></td><td><div class="prompt-example">Japanese high school uniform top. Clean white shirt with navy collar detail, minimal wrinkles, soft cel-shading, simple and neat anime texture.</div></td></tr>
+            <tr><td><strong>KPOP Star</strong></td><td><div class="prompt-example">Stylish cropped stage outfit top. Black base with metallic accents, subtle fabric shine, sharp contrast shading, performance-ready idol costume texture.</div></td></tr>
+            <tr><td><strong>Gyaru</strong></td><td><div class="prompt-example">Flashy fitted top with leopard pattern and pink accents. Glossy fabric look, strong highlights, bold contrast shading, trendy gyaru fashion vibe.</div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Pants -->
+    <div class="card">
+      <h3 style="color:#fff;margin-bottom:12px">👖 Pants</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Style</th><th>프롬프트</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Anime High School</strong></td><td><div class="prompt-example">Classic navy school uniform slacks. Simple fabric texture, soft folds, minimal shading, clean anime-style textile surface.</div></td></tr>
+            <tr><td><strong>KPOP Star</strong></td><td><div class="prompt-example">Slim-fit black performance pants with subtle leather texture. Light reflection on edges, sharp creases, stage lighting effect shading.</div></td></tr>
+            <tr><td><strong>Gyaru</strong></td><td><div class="prompt-example">Low-rise denim with heavy wash texture, visible stitching, slightly distressed details, bold shading and high contrast highlights.</div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Gloves -->
+    <div class="card">
+      <h3 style="color:#fff;margin-bottom:12px">🧤 Gloves</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Style</th><th>프롬프트</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Anime High School</strong></td><td><div class="prompt-example">Simple dark school gloves. Matte fabric texture, soft shading, minimal detail, clean anime cel style.</div></td></tr>
+            <tr><td><strong>KPOP Star</strong></td><td><div class="prompt-example">Black fingerless performance gloves with subtle leather shine. Defined seam details, stage-ready texture finish.</div></td></tr>
+            <tr><td><strong>Gyaru</strong></td><td><div class="prompt-example">Bright pink glossy gloves with decorative patterns. Shiny material texture, strong highlights, flashy fashion styling.</div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Boots -->
+    <div class="card">
+      <h3 style="color:#fff;margin-bottom:12px">👢 Boots</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Style</th><th>프롬프트</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Anime High School</strong></td><td><div class="prompt-example">Clean black school loafers. Smooth leather texture, subtle shine, minimal crease detail, soft anime shading.</div></td></tr>
+            <tr><td><strong>KPOP Star</strong></td><td><div class="prompt-example">High black stage boots with metallic accents. Glossy leather texture, strong light reflection, sharp contrast for stage presence.</div></td></tr>
+            <tr><td><strong>Gyaru</strong></td><td><div class="prompt-example">Platform boots with bold color accents and decorative straps. Glossy finish, exaggerated shine, strong contrast shading.</div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== ERRORS / EDGE CASES ==================== -->
+<div class="tab-panel" id="panel-errors">
+
+  <div class="section">
+    <div class="section-title">🚨 에러 모달 3종</div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>케이스</th><th>모달 제목</th><th>메시지</th><th>버튼</th><th>횟수 차감</th></tr></thead>
+        <tbody>
+          <tr><td>생성 실패</td><td><strong>Generation failed</strong></td><td>Please try again. Your generation count has not been deducted.</td><td>Retry</td><td><span class="badge badge-ok">미차감</span></td></tr>
+          <tr><td>타임아웃</td><td><strong>Taking longer than expected</strong></td><td>Please try again. Your generation count has not been deducted.</td><td>Retry</td><td><span class="badge badge-ok">미차감</span></td></tr>
+          <tr><td>사용자 취소</td><td><strong>Cancel generation and exit?</strong></td><td>Generation will be cancelled, but this attempt will still count.</td><td>Cancel and Exit (Red)</td><td><span class="badge badge-p0">차감</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">⚠️ 엣지 케이스 체크리스트</div>
+    <ul class="checklist">
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">E-1</span> 생성 중 네트워크 끊김 → 에러 처리 확인, 크래시 없음</div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">E-2</span> 생성 중 브라우저 탭 전환 후 복귀 → 상태 유지</div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">E-3</span> 500자 꽉 찬 프롬프트로 생성 → 정상 동작</div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">E-4</span> 특수문자/이모지 포함 프롬프트 → 정상 처리 or 필터링</div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">E-5</span> 빈 프롬프트로 Generate → 비활성화 or 에러 메시지</div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">E-6</span> IP 관련 프롬프트 (예: "Roronoa Zoro") → 저작권 필터링 여부 확인</div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">E-7</span> NSFW 프롬프트 → 필터링/차단 여부 확인</div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">E-8</span> 5회 연속 빠른 Generate 클릭 → 중복 요청 방지</div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">E-9</span> 생성 완료 직후 브라우저 새로고침 → 결과 소실 안내</div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">E-10</span> 5종 파츠 각각 AI Generate 정상 동작 확인 (Head/Tshirt/Pants/Gloves/Boots)</div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">E-11</span> UTC 0시 횟수 충전 타이밍에 생성 중인 경우 → 동작 확인</div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">E-12</span> 동시에 2개 브라우저 탭에서 생성 시도 → 횟수 동기화</div></li>
+    </ul>
+  </div>
+</div>
+
+</div><!-- /content -->
+
+<script>
+function switchTab(id) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById('panel-' + id).classList.add('active');
+}
+</script>
+</body>
+</html>
