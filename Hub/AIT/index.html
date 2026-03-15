@@ -111,8 +111,8 @@
   <h1>허브 AIT 생성 기능 QA Dashboard</h1>
   <div class="header-meta">
     <div class="meta-chip">JIRA <span>OVDR-9591</span></div>
-    <div class="meta-chip">PRD <span>[PRD] 허브 AIT 생성 기능 추가</span></div>
-    <div class="meta-chip">Status <span>IN PROGRESS</span></div>
+    <div class="meta-chip">PRD <span>OVDR-9591 (2026-02-11)</span></div>
+    <div class="meta-chip">Status <span>기획·디자인 DONE / 개발 BACKLOG</span></div>
   </div>
 </div>
 
@@ -223,6 +223,19 @@
           <tr><td>9</td><td>TBD AI 생성 과금</td><td>생성 횟수 소진 시 BLUC 추가 구매 (1,000 BLUC = 5회)</td><td><span class="badge badge-p1">P1</span></td></tr>
         </tbody>
       </table>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">📌 QA 전 확인 사항</div>
+    <div class="card">
+      <ul style="list-style:disc;padding-left:20px;color:var(--muted);font-size:13px;line-height:2">
+        <li>현재 FE·BE·Unreal 모두 <strong style="color:var(--orange)">BACKLOG</strong> — 개발 완료 후 QA 진행</li>
+        <li>모바일 환경에서는 Hub AIT <strong style="color:var(--red)">진입 차단</strong> (데스크톱 웹 전용)</li>
+        <li>Dev/Staging 환경에서는 생성 횟수 <strong style="color:var(--green)">무제한</strong></li>
+        <li>ComfyUI 엔드포인트로 생성 요청 → S3에 결과 저장 → 허브에서 불러오기</li>
+        <li>AI 생성 아이템은 도안 수정 불가 (template 탭 제거), 썸네일에 AI 아이콘 표시</li>
+      </ul>
     </div>
   </div>
 </div>

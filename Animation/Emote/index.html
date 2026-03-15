@@ -156,6 +156,7 @@
   <h1>Animation / Emote QA Dashboard</h1>
   <div class="header-meta">
     <div class="meta-chip">JIRA <span>OVDR-8656</span></div>
+    <div class="meta-chip">PRD <span>OVDR-8651</span></div>
     <div class="meta-chip">Sprint <span>31</span></div>
     <div class="meta-chip">Build <span>com.overdare.overdare.dev</span></div>
     <div class="meta-chip">Updated <span>2026-03-12</span></div>
@@ -168,6 +169,7 @@
   <div class="tab" onclick="switchTab('scenarios')">🎬 테스트 시나리오</div>
   <div class="tab" onclick="switchTab('assets')">📦 에셋 목록</div>
   <div class="tab" onclick="switchTab('bugs')">🐛 버그 / 미확인</div>
+  <div class="tab" onclick="switchTab('smoke')">🔥 Smoke Test</div>
 </div>
 
 <div class="content">
@@ -297,15 +299,84 @@ adb logcat | grep -E "OVDR_grpc.*ERROR|Valid target emote does not exist|status.
 
   <div class="section">
     <div class="section-title">🙋 DRI & Contacts</div>
-    <div class="dri-grid">
-      <div class="dri-card"><div class="dri-role">QA 총괄</div><div class="dri-name">@최민철 / @이재니</div></div>
-      <div class="dri-card"><div class="dri-role">기획 확인 (번들명/Swim 범위)</div><div class="dri-name">@이재니</div></div>
-      <div class="dri-card"><div class="dri-role">Cooker / 배포</div><div class="dri-name">@김상현 / @남정석</div></div>
-      <div class="dri-card"><div class="dri-role">Art (FBX / 썸네일)</div><div class="dri-name">@최정효 / @이재니</div></div>
-      <div class="dri-card"><div class="dri-role">App / Streaming</div><div class="dri-name"><span class="badge badge-q">TBD (구 @강현규)</span></div></div>
-      <div class="dri-card"><div class="dri-role">Unreal (마켓 / 커마)</div><div class="dri-name">@정석영</div></div>
-      <div class="dri-card"><div class="dri-role">Unreal (휴머노이드)</div><div class="dri-name">@유현욱</div></div>
-      <div class="dri-card"><div class="dri-role">Android</div><div class="dri-name">@조현철</div></div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>역할</th><th>담당자</th><th>JIRA</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td>PO / 기획</td><td>@Jaeni Lee (이재니)</td><td>OVDR-8651</td><td><span class="badge badge-ok">DONE</span></td></tr>
+          <tr><td>디자인</td><td>@Changmo Kang (강창모)</td><td>OVDR-8655</td><td><span class="badge badge-ok">DONE</span></td></tr>
+          <tr><td>Unreal (쿠킹/배포)</td><td>@Yonghuen Cho (조용현)</td><td>OVDR-8653</td><td><span class="badge badge-q">QA</span></td></tr>
+          <tr><td>Unreal (마켓/커마)</td><td>@Seokyoung Jeong (정석영)</td><td>OVDR-8822</td><td><span class="badge badge-info">IN PROGRESS</span></td></tr>
+          <tr><td>Unreal (휴머노이드)</td><td>@Hyunwook Yoo (유현욱)</td><td>OVDR-8823</td><td><span class="badge badge-info">IN PROGRESS</span></td></tr>
+          <tr><td>Android</td><td>@Hyunchul Jo (조현철)</td><td>OVDR-8654</td><td><span class="badge badge-info">IN PROGRESS</span></td></tr>
+          <tr><td>Server</td><td>@Sanghyun Kim (김상현)</td><td>OVDR-8652</td><td><span class="badge badge-ok">DONE</span></td></tr>
+          <tr><td>QA</td><td>@Mincheol Choi (최민철)</td><td>OVDR-8656</td><td><span class="badge badge-warn">WAITING</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">📖 PRD 핵심 정책 (최신화: 2026-02-23)</div>
+    <div class="card" style="margin-bottom:14px">
+      <h3 style="color:#fff;margin-bottom:10px;font-size:14px">🔄 Emote 마이그레이션 정책</h3>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div>
+          <div style="font-size:12px;color:var(--green);font-weight:700;margin-bottom:6px">무료 (기본 지급)</div>
+          <ul style="list-style:disc;padding-left:18px;color:var(--muted);font-size:13px;line-height:1.8">
+            <li>Cheer</li><li>Greetings</li><li>Deep Bow</li><li>Tease</li><li>Fury</li><li>Clap</li><li>Chicken Dance</li>
+            <li style="color:var(--accent2)">(구 Poses) Oh yeah, Salute, T-pose</li>
+          </ul>
+        </div>
+        <div>
+          <div style="font-size:12px;color:var(--yellow);font-weight:700;margin-bottom:6px">유료 (구매 필요)</div>
+          <ul style="list-style:disc;padding-left:18px;color:var(--muted);font-size:13px;line-height:1.8">
+            <li>Look at me</li><li>I Miss you</li><li>Showoff</li><li>Wacky Wave</li>
+            <li style="color:var(--accent2)">(구 Poses) Ew, Meditate, Kowtow, Bow, Look at That, Squat, Energy Blast, Liberty Pose</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="card" style="margin-bottom:14px">
+      <h3 style="color:#fff;margin-bottom:10px;font-size:14px">🎭 Idle 애니메이션 루프 정책</h3>
+      <ul style="list-style:none;padding:0;color:var(--muted);font-size:13px;line-height:2">
+        <li>1. Idle(1)은 항상 <strong style="color:var(--text)">기본 루프</strong>로 사용 (Idle이 1개만 있으면 해당 Idle만 루프)</li>
+        <li>2. Idle(2)~Idle(3)은 Idle(1) 이후 <strong style="color:var(--text)">랜덤 IdleVariation</strong>으로 취급</li>
+        <li>3. 정지 상태 진입 → Idle(1) 즉시 루프 재생</li>
+        <li>4. 기본 Idle 루프가 <strong style="color:var(--accent)">최소 10초</strong> 유지 후 → Idle(2)~(3) 중 1회 블렌딩 재생</li>
+        <li>5. IdleVariation 종료 → Idle(1) 기본 루프 복귀, 반복</li>
+      </ul>
+    </div>
+    <div class="card" style="margin-bottom:14px">
+      <h3 style="color:#fff;margin-bottom:10px;font-size:14px">📦 번들 장착 상태 표시 규칙 (5케이스)</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>#</th><th>조건</th><th>Bundle 슬롯 표시</th></tr></thead>
+          <tbody>
+            <tr><td>1</td><td>A Bundle 장착 → 하위 전체 B로 교체</td><td><strong style="color:var(--accent)">B 썸네일</strong></td></tr>
+            <tr><td>2</td><td>A Bundle 장착 → 하위 전체 unequip</td><td><strong style="color:var(--muted)">Empty</strong> (기본 아이콘)</td></tr>
+            <tr><td>3</td><td>미장착 → 개별 슬롯 1개 장착</td><td><strong style="color:var(--yellow)">Custom</strong></td></tr>
+            <tr><td>4</td><td>미장착 → A Bundle 하위 전체 장착</td><td><strong style="color:var(--accent)">A 썸네일</strong></td></tr>
+            <tr><td>5</td><td>미장착 → 서로 다른 Bundle 혼합 장착</td><td><strong style="color:var(--yellow)">Custom</strong></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card" style="margin-bottom:14px">
+      <h3 style="color:#fff;margin-bottom:10px;font-size:14px">🎮 크리에이터 Animations 제어 정책</h3>
+      <ul style="list-style:none;padding:0;color:var(--muted);font-size:13px;line-height:2">
+        <li>• 크리에이터가 월드 내 <strong style="color:var(--text)">강제 Animations</strong> 지정 슬롯 → 유저 Customize보다 우선</li>
+        <li>• 크리에이터가 <strong style="color:var(--red)">휴머노이드 디스크립션</strong> 적용 → 유저 커스텀 <strong style="color:var(--red)">전체 무시</strong> (일부 슬롯만 수정해도 전부 강제)</li>
+        <li>• 위 조건 모두 해당 없으면 → 유저 Customize Animations 우선 적용</li>
+        <li>• Emote 제어: 현재 크리에이터 제어 불가 (향후 대응)</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3 style="color:#fff;margin-bottom:10px;font-size:14px">🌐 슬롯 구성</h3>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+        <code>Idle (3종)</code> <code>Walk</code> <code>Run</code> <code>Jump (Start·Loop 2종)</code> <code>Fall</code> <code>Sprint</code>
+      </div>
+      <div style="color:var(--muted);font-size:12px">슬롯별 수량 6개 / 실제 수량 10개 (Idle 3 + Walk + Run + Jump Start + Jump Loop×2 + Fall + Sprint)</div>
     </div>
   </div>
 
@@ -541,6 +612,7 @@ adb logcat | grep -E "OVDR_grpc.*ERROR|Valid target emote does not exist|status.
           <tr><td><strong>BUG-06</strong></td><td><span class="badge badge-p1">P1</span></td><td>이모트 착용 시 Save 버튼 계속 노출</td><td>Android @조현철</td></tr>
           <tr><td><strong>BUG-07</strong></td><td><span class="badge badge-p2">P2</span></td><td>미리보기 타이머 중첩 (2번 넘겨짐)</td><td>Unreal/Android</td></tr>
           <tr><td><strong>BUG-08</strong></td><td><span class="badge badge-p2">P2</span></td><td>커마탭 애니/이모트 진입 시 컬러 변경 미제거</td><td>Android @조현철</td></tr>
+          <tr style="background:rgba(246,107,107,0.05)"><td><strong>BUG-09</strong></td><td><span class="badge badge-p1">P1</span></td><td>마켓 Emote 선택 → Customize 전환 시 Emote 미리보기 미중지</td><td>Android @조현철</td></tr>
         </tbody>
       </table>
     </div>
@@ -1258,11 +1330,67 @@ adb logcat | grep -E "OVDR_grpc.*ERROR|Valid target emote does not exist|status.
 
 </div>
 
+<!-- ====== TAB: SMOKE TEST ====== -->
+<div class="tab-panel" id="tab-smoke">
+  <div class="section">
+    <div class="section-title">🔥 스모크테스트 결과 (22건 전체 PASS)</div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>#</th><th>도메인</th><th>조건</th><th>트리거</th><th>기대 결과</th><th>결과</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td>마켓플레이스 발견</td><td>기본 상태</td><td>Marketplace → Animations 탭 진입</td><td>Bundles·Emotes 탭 노출, 그리드에 Title 노출</td><td><span class="badge badge-ok">PASS</span></td></tr>
+          <tr><td>2</td><td>마켓플레이스 발견</td><td>Bundles 아이템 선택</td><td>Bundles 아이템 탭</td><td>Idle·Walk·Run 등 하위 동작 목록 노출, 롤링 순서 (Idle→Walk→Run→Jump→Fall→Sprint) 자동 미리보기</td><td><span class="badge badge-warn">PASS*</span></td></tr>
+          <tr><td>3</td><td>마켓플레이스 발견</td><td>Emote 아이템 선택</td><td>Emote 아이템 탭</td><td>미리보기 루프 재생, 비선택 시 기본 애니메이션 복귀</td><td><span class="badge badge-ok">PASS</span></td></tr>
+          <tr><td>4</td><td>Customize 발견</td><td>기본 상태</td><td>Customize → Animations 탭 진입</td><td>보유 Animations·Emote 그리드 노출, 기본 Animations 장착 상태 표시</td><td><span class="badge badge-ok">PASS</span></td></tr>
+          <tr><td>5</td><td>획득 - 구매</td><td>미보유 Animations 착용 후 Save</td><td>Save 버튼 탭</td><td>구매 리스트 노출 (Bundles 대표 표시), 구매 완료 시 즉시 Customize 반영</td><td><span class="badge badge-ok">PASS</span></td></tr>
+          <tr><td>6</td><td>획득 - 구매</td><td>Animations·Emote만 단독 장착 Save</td><td>Save 버튼 탭</td><td>Share your New Look! 미노출 (다른 코스튬 최소 1개 함께 착용 시에만)</td><td><span class="badge badge-ok">PASS</span></td></tr>
+          <tr><td>7</td><td>장착 - Bundles</td><td>기본 상태</td><td>특정 번들 착용</td><td>전체 슬롯 일괄 적용, Bundle 슬롯 해당 썸네일 표시</td><td><span class="badge badge-ok">PASS</span></td></tr>
+          <tr><td>8</td><td>장착 - Bundles</td><td>A Bundle → B Bundle 교체</td><td>개별 슬롯 전체 B로 변경</td><td>Bundle 슬롯 B 썸네일 표시</td><td><span class="badge badge-ok">PASS</span></td></tr>
+          <tr><td>9</td><td>장착 - Bundles</td><td>미장착 → 개별 슬롯 1개 장착</td><td>개별 슬롯 장착</td><td>Bundle 슬롯 Custom 표시</td><td><span class="badge badge-ok">PASS</span></td></tr>
+          <tr><td>10</td><td>장착 - Bundles</td><td>미장착 → A Bundle 하위 전체 장착</td><td>개별 슬롯 전체 A로</td><td>Bundle 슬롯 A 표시</td><td><span class="badge badge-ok">PASS</span></td></tr>
+          <tr><td>11</td><td>장착 - Bundles</td><td>서로 다른 Bundle 혼합 장착</td><td>A·B 혼합 장착</td><td>Bundle 슬롯 Custom 표시</td><td><span class="badge badge-ok">PASS</span></td></tr>
+          <tr><td>12</td><td>장착 - 개별 슬롯</td><td>Walk 슬롯 선택</td><td>Walk 탭</td><td>Walk 동작 아이템만 필터링, 장착/해제 가능</td><td><span class="badge badge-ok">PASS</span></td></tr>
+          <tr><td>13</td><td>장착 - 개별 슬롯</td><td>Animations 변경 미저장</td><td>변경 후 확인</td><td>Save 버튼 활성화, 탭 시 저장 완료</td><td><span class="badge badge-ok">PASS</span></td></tr>
+          <tr><td>14</td><td>장착 - 개별 슬롯</td><td>Clear 버튼 탭</td><td>Clear 버튼</td><td>전체 슬롯 기본 애니메이션 리셋</td><td><span class="badge badge-ok">PASS</span></td></tr>
+          <tr><td>15</td><td>인게임 Animations</td><td>장착 상태로 일반 월드 진입</td><td>캐릭터 이동·점프·달리기</td><td>장착된 Animations 자동 재생, 다른 유저에게도 동일 노출</td><td><span class="badge badge-ok">PASS</span></td></tr>
+          <tr><td>16</td><td>인게임 - 크리에이터 제어</td><td>캐릭터 사망 후 리스폰</td><td>캐릭터 사망</td><td>장착된 Animations 유지</td><td><span class="badge badge-ok">PASS</span></td></tr>
+          <tr><td>17</td><td>인게임 - 크리에이터 제어</td><td>휴머노이드 디스크립션 적용 월드</td><td>월드 진입</td><td>유저 커스텀 전체 무시, 크리에이터 지정값 강제 적용</td><td><span class="badge badge-ok">PASS</span></td></tr>
+          <tr><td>18</td><td>인게임 Emote</td><td>Emote 보유 상태</td><td>HUD Emote 선택·실행</td><td>Emote 재생, 다른 유저에게도 동일 노출, Animations 슬롯 무관</td><td><span class="badge badge-ok">PASS</span></td></tr>
+          <tr><td>19</td><td>인게임 Emote</td><td>Emote Together (미보유)</td><td>상대 Emote Together 요청</td><td>미보유 상태에서도 재생 가능</td><td><span class="badge badge-ok">PASS</span></td></tr>
+          <tr><td>20</td><td>허드 탭 통합</td><td>업데이트 후 인게임 진입</td><td>인게임 HUD 진입</td><td>Emote·Poses 단일 탭 통합, 기존 재생 로직 유지</td><td><span class="badge badge-ok">PASS</span></td></tr>
+          <tr><td>21</td><td>구매 내역</td><td>BLUC 구매 후</td><td>Item Purchases 진입</td><td>Animations·Emote 구매 내역 노출</td><td><span class="badge badge-ok">PASS</span></td></tr>
+          <tr><td>22</td><td>프로필</td><td>업데이트 후 프로필 진입</td><td>프로필 페이지 진입</td><td>기존 Emote 탭 제거 확인</td><td><span class="badge badge-ok">PASS</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="card" style="margin-top:16px; border-color: rgba(247,154,62,0.35);">
+      <div style="color:var(--orange);font-weight:700;margin-bottom:8px">* 스모크테스트 중 발견된 이슈</div>
+      <ul style="list-style:disc;padding-left:20px;color:var(--muted);font-size:13px;line-height:2">
+        <li>TC#2: 롤링 순서 불일치 — Spec: Idle→Walk→Run→Jump→Fall→Sprint / 실제: Idle→Jump→Fall→Run→Sprint→Walk</li>
+        <li>이미 소유한 번들도 구매가 가능한 것으로 표기됨</li>
+        <li>애니/이모트 구매 후 터치해도 레드닷(New 뱃지) 안 사라짐</li>
+        <li>이모트 착용 시 Save 버튼 계속 노출 (Save 활성화되면 안 됨)</li>
+        <li>커마탭 내 애니/이모트 탭 진입 시 컬러 변경 UI 미제거</li>
+        <li>미리보기 화살표 터치 시 타이머와 중첩되어 2번 넘겨지는 경우 발생</li>
+      </ul>
+    </div>
+    <div class="card" style="margin-top:16px; border-color: rgba(92,141,246,0.3);">
+      <div style="color:var(--accent2);font-weight:700;margin-bottom:8px">인월드 테스트 참고</div>
+      <ul style="list-style:disc;padding-left:20px;color:var(--muted);font-size:13px;line-height:2">
+        <li><code>chart → AnimAlphaTest</code> — 기본 테스트 월드 (Humanoid Description apply 적용)</li>
+        <li><code>chart → AnimDesclnitialTest</code> — 휴머노이드 디스크립션 자체 적용 월드</li>
+        <li>*휴머노이드 디스크립션: 크리에이터가 해당 월드에 애니메이션을 강제 적용한 케이스</li>
+        <li>시스템 리뉴얼 브랜치와 시트 겹침 — 커밋해시만 이전 리뉴얼 전 걸로 배포하면 됨</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
 </div><!-- /content -->
 
 <script>
 function switchTab(name) {
-  const tabs = ['prepare','checklist','scenarios','assets','bugs'];
+  const tabs = ['prepare','checklist','scenarios','assets','bugs','smoke'];
   document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', tabs[i] === name));
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
   document.getElementById('tab-' + name).classList.add('active');
