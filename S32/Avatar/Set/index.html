@@ -1,0 +1,945 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Overdare — Avatar Set QA Dashboard</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #222536;
+    --border: #2e3248;
+    --accent: #2ec4b6;
+    --accent2: #5c8df6;
+    --green: #3ecf8e;
+    --red: #f66b6b;
+    --yellow: #f5c542;
+    --orange: #f79a3e;
+    --text: #e2e4ef;
+    --muted: #7a7f9a;
+    --code-bg: #12141e;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', -apple-system, sans-serif; font-size: 14px; line-height: 1.6; }
+
+  .header { background: linear-gradient(135deg, #1a1d27 0%, #12141e 100%); border-bottom: 1px solid var(--border); padding: 24px 32px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .header-badge { background: var(--accent); color: #fff; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 4px; letter-spacing: 0.5px; }
+  .header h1 { font-size: 20px; font-weight: 700; color: #fff; }
+  .header-meta { margin-left: auto; display: flex; gap: 12px; flex-wrap: wrap; }
+  .meta-chip { background: var(--surface2); border: 1px solid var(--border); padding: 4px 10px; border-radius: 6px; font-size: 12px; color: var(--muted); }
+  .meta-chip span { color: var(--text); font-weight: 600; }
+
+  .tabs { display: flex; gap: 2px; padding: 0 32px; background: var(--surface); border-bottom: 1px solid var(--border); overflow-x: auto; }
+  .tab { padding: 12px 18px; cursor: pointer; font-size: 13px; font-weight: 500; color: var(--muted); border-bottom: 2px solid transparent; transition: all 0.15s; white-space: nowrap; }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  .content { padding: 28px 32px; max-width: 1200px; }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  .section { margin-bottom: 32px; }
+  .section-title { font-size: 15px; font-weight: 700; color: #fff; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 20px; margin-bottom: 14px; }
+
+  .badge { font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 4px; letter-spacing: 0.3px; }
+  .badge-p0 { background: rgba(246,107,107,0.15); color: var(--red); border: 1px solid rgba(246,107,107,0.3); }
+  .badge-p1 { background: rgba(245,197,66,0.15); color: var(--yellow); border: 1px solid rgba(245,197,66,0.3); }
+  .badge-ok { background: rgba(62,207,142,0.15); color: var(--green); border: 1px solid rgba(62,207,142,0.3); }
+  .badge-warn { background: rgba(247,154,62,0.15); color: var(--orange); border: 1px solid rgba(247,154,62,0.3); }
+  .badge-info { background: rgba(92,141,246,0.15); color: var(--accent2); border: 1px solid rgba(92,141,246,0.3); }
+  .badge-q { background: rgba(46,196,182,0.15); color: var(--accent); border: 1px solid rgba(46,196,182,0.3); }
+
+  .tbl-wrap { overflow-x: auto; border-radius: 8px; border: 1px solid var(--border); }
+  table { width: 100%; border-collapse: collapse; }
+  thead { background: var(--surface2); }
+  th { padding: 10px 14px; text-align: left; font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  td { padding: 10px 14px; border-bottom: 1px solid var(--border); font-size: 13px; vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(255,255,255,0.02); }
+  code { background: var(--code-bg); color: #a5b4fc; padding: 2px 6px; border-radius: 4px; font-family: 'JetBrains Mono', 'Fira Code', monospace; font-size: 12px; }
+
+  .checklist { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+  .checklist li { display: flex; align-items: flex-start; gap: 10px; padding: 8px 12px; border-radius: 6px; background: var(--surface2); border: 1px solid var(--border); }
+  .checklist li:hover { border-color: var(--accent); }
+  .check-box { width: 16px; height: 16px; border: 2px solid var(--border); border-radius: 4px; flex-shrink: 0; margin-top: 2px; cursor: pointer; transition: all 0.1s; }
+  .check-box.checked { background: var(--accent); border-color: var(--accent); }
+  .check-label { flex: 1; color: var(--text); cursor: pointer; font-size: 13px; }
+  .check-label .tc-id { color: var(--accent); font-weight: 700; margin-right: 6px; font-size: 12px; }
+
+  .steps { border-radius: 8px; overflow: hidden; border: 1px solid var(--border); }
+  .step { display: grid; grid-template-columns: 36px 1fr 1fr 1fr; gap: 0; border-bottom: 1px solid var(--border); }
+  .step:last-child { border-bottom: none; }
+  .step-num { background: var(--surface2); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px; color: var(--accent); border-right: 1px solid var(--border); padding: 10px 0; }
+  .step-cell { padding: 10px 14px; font-size: 13px; border-right: 1px solid var(--border); }
+  .step-cell:last-child { border-right: none; }
+  .step-cell strong { color: #fff; }
+  .step-header .step-num { background: transparent; color: var(--muted); font-size: 11px; font-weight: 600; text-transform: uppercase; }
+  .step-header .step-cell { color: var(--muted); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; background: var(--surface2); }
+  .precond { background: rgba(46,196,182,0.08); border: 1px solid rgba(46,196,182,0.2); border-radius: 8px; padding: 10px 14px; margin: 14px 0 10px; font-size: 13px; color: var(--accent); }
+  .precond::before { content: '📌 전제 조건  '; font-weight: 700; }
+
+  .stat-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+  .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px 20px; flex: 1; min-width: 140px; text-align: center; }
+  .stat-val { font-size: 28px; font-weight: 800; color: var(--accent); }
+  .stat-label { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+  .flow-box { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 24px; margin-bottom: 14px; }
+  .flow-steps { display: flex; align-items: center; gap: 0; flex-wrap: wrap; justify-content: center; }
+  .flow-step { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 12px 20px; text-align: center; min-width: 140px; }
+  .flow-step.active { border-color: var(--accent); background: rgba(46,196,182,0.1); }
+  .flow-step-num { font-size: 11px; color: var(--muted); font-weight: 600; margin-bottom: 4px; }
+  .flow-step-title { font-size: 14px; font-weight: 700; color: #fff; }
+  .flow-arrow { color: var(--muted); font-size: 20px; padding: 0 8px; flex-shrink: 0; }
+
+  .policy-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+  .policy-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
+  .policy-card-title { font-weight: 700; color: #fff; margin-bottom: 8px; font-size: 13px; display: flex; align-items: center; gap: 6px; }
+  .policy-card p { font-size: 13px; color: var(--muted); line-height: 1.5; }
+  .policy-card .val { color: var(--accent); font-weight: 700; }
+
+  .prepare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+  @media (max-width: 800px) { .prepare-grid { grid-template-columns: 1fr; } }
+  .info-block { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 18px; }
+  .info-block-title { font-size: 13px; font-weight: 700; color: #fff; margin-bottom: 12px; display: flex; gap: 8px; align-items: center; }
+
+  .alert { border-radius: 8px; padding: 12px 16px; margin-bottom: 14px; font-size: 13px; display: flex; gap: 10px; align-items: flex-start; }
+  .alert-yellow { background: rgba(245,197,66,0.08); border: 1px solid rgba(245,197,66,0.25); }
+  .alert-purple { background: rgba(46,196,182,0.08); border: 1px solid rgba(46,196,182,0.25); }
+  .alert-text { color: var(--text); line-height: 1.6; }
+  .alert-text strong { color: #fff; }
+
+  .figma-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+  .figma-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; cursor: pointer; transition: border-color 0.15s; }
+  .figma-card:hover { border-color: var(--accent); }
+  .figma-card img { width: 100%; height: 200px; object-fit: cover; border-bottom: 1px solid var(--border); }
+  .figma-card-body { padding: 12px 16px; }
+  .figma-card-title { font-weight: 700; color: #fff; font-size: 13px; margin-bottom: 4px; }
+  .figma-card-desc { font-size: 12px; color: var(--muted); }
+
+  .l10n-key { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #a5b4fc; word-break: break-all; }
+
+  .lightbox { display:none; position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,0.85); backdrop-filter:blur(6px); align-items:center; justify-content:center; }
+  .lightbox.active { display:flex; }
+  .lightbox-close { position:fixed; top:16px; right:16px; z-index:10000; width:40px; height:40px; border-radius:50%; border:1px solid rgba(255,255,255,0.2); background:rgba(30,30,40,0.8); color:#fff; font-size:20px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.15s; }
+  .lightbox-close:hover { background:var(--red); border-color:var(--red); transform:scale(1.1); }
+  .lightbox-title { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); color:#fff; font-size:14px; font-weight:600; background:rgba(30,30,40,0.8); padding:6px 16px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); z-index:10000; white-space:nowrap; }
+  .lightbox img { max-width:92vw; max-height:88vh; object-fit:contain; border-radius:8px; box-shadow:0 8px 40px rgba(0,0,0,0.5); }
+  .lightbox-nav { position:fixed; top:50%; transform:translateY(-50%); z-index:10000; width:44px; height:44px; border-radius:50%; border:1px solid rgba(255,255,255,0.2); background:rgba(30,30,40,0.8); color:#fff; font-size:22px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.15s; }
+  .lightbox-nav:hover { background:var(--accent); border-color:var(--accent); }
+  .lightbox-prev { left:16px; }
+  .lightbox-next { right:16px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <span class="header-badge">AVATAR SET</span>
+  <h1>아바타 세트 제공 QA Dashboard</h1>
+  <div class="header-meta">
+    <div class="meta-chip">JIRA <span>OVDR-896x</span></div>
+    <div class="meta-chip">PRD <span>OVDR-8961</span></div>
+    <div class="meta-chip">Sprint <span>S32 (QA Only)</span></div>
+    <div class="meta-chip">Status <span>Server/Android IN PROGRESS</span></div>
+    <div class="meta-chip" style="border-color:rgba(246,107,107,0.4);color:var(--red)">Smoke <span style="color:var(--red)">15P / 6F / 3-</span></div>
+  </div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('overview')">Overview</div>
+  <div class="tab" onclick="switchTab('smoke')">Smoke Test</div>
+  <div class="tab" onclick="switchTab('checklist')">QA Checklist</div>
+  <div class="tab" onclick="switchTab('scenarios')">Test Scenarios</div>
+  <div class="tab" onclick="switchTab('uxspec')">UX Spec</div>
+  <div class="tab" onclick="switchTab('l10n')">L10N</div>
+  <div class="tab" onclick="switchTab('figma')">Figma</div>
+</div>
+
+<div class="content">
+
+<!-- ==================== OVERVIEW ==================== -->
+<div class="tab-panel active" id="panel-overview">
+
+  <div class="stat-row">
+    <div class="stat-card"><div class="stat-val">7</div><div class="stat-label">Key Features</div></div>
+    <div class="stat-card"><div class="stat-val">80+</div><div class="stat-label">목표 세트 수</div></div>
+    <div class="stat-card"><div class="stat-val">3x3</div><div class="stat-label">그리드 (1줄 3슬롯)</div></div>
+    <div class="stat-card"><div class="stat-val">3+</div><div class="stat-label">최소 코스튬 파츠</div></div>
+    <div class="stat-card"><div class="stat-val">10</div><div class="stat-label">L10N 키</div></div>
+  </div>
+
+  <div class="alert" style="background:rgba(246,107,107,0.08);border:1px solid rgba(246,107,107,0.25)">
+    <span>🚨</span>
+    <div class="alert-text"><strong>스모크테스트 결과 (2026-03-24):</strong> 24건 중 <strong style="color:var(--green)">15 PASS</strong> / <strong style="color:var(--red)">6 FAIL</strong> / <strong style="color:var(--muted)">3 미확인</strong> — <strong style="color:var(--red)">세트 구매 불가 (P0 블로커)</strong> 및 뒤로가기 파츠 잔류 이슈 발견. <a href="#" onclick="switchTab('smoke');document.querySelector('[onclick*=smoke]').classList.add('active');return false" style="color:var(--accent);text-decoration:underline">상세 보기 →</a></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">🎯 목표</div>
+    <div class="card">
+      <p>마켓플레이스 최상단에 아바타 세트를 우선 노출해 유저가 소년 성장물 IP 기반 아바타 스타일을 <strong style="color:var(--accent)">즉시 인지·탐색</strong>할 수 있게 함</p>
+      <p style="margin-top:6px">아바타 쇼케이스 상위 코디를 세트 단위로 연동해, 해당 스타일을 <strong style="color:var(--accent)">그대로 구매하고 참여/공유</strong>로 확장</p>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">🗺️ 유저 플로우</div>
+    <div class="flow-box">
+      <div class="flow-steps">
+        <div class="flow-step active">
+          <div class="flow-step-num">1</div>
+          <div class="flow-step-title">발견</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:4px">Avatars 탭 탐색</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">
+          <div class="flow-step-num">2</div>
+          <div class="flow-step-title">장착</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:4px">세트 프리뷰</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step active">
+          <div class="flow-step-num">3</div>
+          <div class="flow-step-title">구매</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:4px">Save → 묶음 구매</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">
+          <div class="flow-step-num">4</div>
+          <div class="flow-step-title">구매 내역</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:4px">Item Purchases</div>
+        </div>
+      </div>
+      <div class="flow-steps" style="margin-top:16px">
+        <div class="flow-step">
+          <div class="flow-step-num">5</div>
+          <div class="flow-step-title">세트 게시</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:4px">쇼케이스 업로드</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">
+          <div class="flow-step-num">6</div>
+          <div class="flow-step-title">등록 알림</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:4px">Noti 발송</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">
+          <div class="flow-step-num">7</div>
+          <div class="flow-step-title">운영 관리</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:4px">Hiker 관리</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">📋 Key Features</div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>No</th><th>구분</th><th>내용</th><th>우선순위</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td>발견</td><td>마켓플레이스에서 아바타 세트 탐색</td><td><span class="badge badge-p0">P0</span></td></tr>
+          <tr><td>2</td><td>장착</td><td>마켓플레이스에서 아바타 세트 장착 (프리뷰)</td><td><span class="badge badge-p0">P0</span></td></tr>
+          <tr><td>3</td><td>구매</td><td>마켓플레이스에서 아바타 세트 구매</td><td><span class="badge badge-p0">P0</span></td></tr>
+          <tr><td>4</td><td>세트 게시</td><td>Web 쇼케이스 코디 게시 → 아바타 세트 등록 안내</td><td><span class="badge badge-p0">P0</span></td></tr>
+          <tr><td>5</td><td>세트 등록 알림</td><td>코디가 세트로 등록 시 유저에게 알림 발송</td><td><span class="badge badge-p1">P1</span></td></tr>
+          <tr><td>6</td><td>운영 관리</td><td>Hiker에서 세트 노출 기준 관리, 수동 끌올</td><td><span class="badge badge-p0">P0</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">🙋 DRI</div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>역할</th><th>담당자</th><th>JIRA</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td>PO / 기획</td><td>@Jaeni Lee (이재니)</td><td><code>OVDR-8961</code></td><td><span class="badge badge-ok">DONE</span></td></tr>
+          <tr><td>디자인</td><td>@Changmo Kang (강창모)</td><td><code>OVDR-8962</code></td><td><span class="badge badge-ok">DONE</span></td></tr>
+          <tr><td>Server</td><td>@Kwonsoo Park (박권수)</td><td><code>OVDR-8963</code></td><td><span class="badge badge-info">IN PROGRESS</span></td></tr>
+          <tr><td>Android</td><td>@Hyunchul Jo (조현철)</td><td><code>OVDR-8965</code></td><td><span class="badge badge-info">IN PROGRESS</span></td></tr>
+          <tr><td>QA</td><td>@Mincheol Choi (최민철), @Jaeni Lee</td><td><code>OVDR-8964</code></td><td><span class="badge badge-warn">BACKLOG</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">📌 QA 전 확인 사항</div>
+    <div class="card">
+      <ul style="list-style:disc;padding-left:20px;color:var(--muted);font-size:13px;line-height:2">
+        <li>Server / Android 모두 <strong style="color:var(--orange)">IN PROGRESS</strong> — 개발 완료 후 QA 진행</li>
+        <li>세트 = 독립 상품이 아님 → <strong style="color:var(--accent)">개별 아이템 묶음 구매</strong></li>
+        <li>세트 구성: <strong style="color:var(--accent)">헤드/바디 + 외형 파츠 3개 이상</strong> (마켓 판매 중인 아이템 기준)</li>
+        <li>비매품(가챠/구템)은 코디 화면에 보이지만 구매 목록에 미포함</li>
+        <li>큐레이터 탈퇴/Ban, 코스튬 Ban/내려감 → 세트 비노출</li>
+        <li>QA는 S32에서 진행, <strong style="color:var(--red)">배포는 추후 예정</strong></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">📦 세트 개념 정의</div>
+    <div class="policy-grid">
+      <div class="policy-card">
+        <div class="policy-card-title">🎭 아바타 세트</div>
+        <p>헤드/바디 + 외형 파츠 <span class="val">3개 이상</span>을 하나의 스타일로 묶은 큐레이션 단위</p>
+      </div>
+      <div class="policy-card">
+        <div class="policy-card-title">🛒 세트 구매</div>
+        <p>세트에 포함된 <span class="val">개별 아이템의 묶음 구매</span> (각 아이템은 인벤토리에 개별 귀속)</p>
+      </div>
+      <div class="policy-card">
+        <div class="policy-card-title">📝 세트 등록</div>
+        <p>아바타 쇼케이스 게시 코디 중 조건 충족 시 <span class="val">자동 등록</span></p>
+      </div>
+      <div class="policy-card">
+        <div class="policy-card-title">🚫 비노출 조건</div>
+        <p>큐레이터 탈퇴/Ban, 코스튬 1개라도 <span class="val">Ban/마켓에서 내려감</span></p>
+      </div>
+      <div class="policy-card">
+        <div class="policy-card-title">🔄 중복 포함</div>
+        <p>동일 아이템이 <span class="val">여러 세트에 중복 포함</span> 가능</p>
+      </div>
+      <div class="policy-card">
+        <div class="policy-card-title">💰 비매품 정책</div>
+        <p>가챠/구템은 코디 화면에 보이지만 <span class="val">구매 목록에 미포함</span></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== SMOKE TEST ==================== -->
+<div class="tab-panel" id="panel-smoke">
+
+  <div class="stat-row">
+    <div class="stat-card"><div class="stat-val">24</div><div class="stat-label">전체 TC</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:var(--green)">15</div><div class="stat-label">PASS</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:var(--red)">6</div><div class="stat-label">FAIL</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:var(--muted)">3</div><div class="stat-label">미확인</div></div>
+  </div>
+
+  <div class="alert" style="background:rgba(246,107,107,0.08);border:1px solid rgba(246,107,107,0.25);margin-bottom:14px">
+    <span>🚨</span>
+    <div class="alert-text"><strong>P0 블로커: 세트 구매 불가</strong> — TC 7~9 전체 미보유/일부 보유/전체 보유 모든 케이스에서 구매가 안 됨. TC 10, 11은 이로 인해 Blocked.</div>
+  </div>
+  <div class="alert" style="background:rgba(246,107,107,0.08);border:1px solid rgba(246,107,107,0.25);margin-bottom:14px">
+    <span>🚨</span>
+    <div class="alert-text"><strong>P0: 뒤로가기 시 파츠 잔류</strong> — TC 5 세트 착용 → 뒤로가기 시 악세파츠(얼굴, 등), 장갑, 신발이 원상복구 안 됨.</div>
+  </div>
+  <div class="alert" style="background:rgba(245,197,66,0.08);border:1px solid rgba(245,197,66,0.25);margin-bottom:14px">
+    <span>⚠️</span>
+    <div class="alert-text"><strong>알려진 이슈 3건</strong> — 아바타셋 썸네일 불일치 / 헤드 포함 세트 재클릭 시 헤드 사라짐 / <code>PurchaseCreatorProducts</code> req에 <code>AvatarSetId</code> 확인 필요</div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">🔥 스모크테스트 결과 (24건)</div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>TC</th><th>플랫폼</th><th>도메인</th><th>조건</th><th>트리거</th><th>기대 결과</th><th>결과</th><th>비고</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td>App</td><td>발견</td><td>기본 상태</td><td>Marketplace > Avatars 탭 진입</td><td>카테고리 최상단(좌측)에 Avatars 탭 고정 노출</td><td><span class="badge badge-ok">PASS</span></td><td></td></tr>
+          <tr><td>2</td><td>App</td><td>발견</td><td>Avatars 탭 진입</td><td>세트 그리드 확인</td><td>1줄 3슬롯 마네킹 형식, 큐레이터 Username 표시</td><td><span class="badge badge-ok">PASS</span></td><td></td></tr>
+          <tr><td>3</td><td>App</td><td>발견</td><td>세트 그리드 노출</td><td>개별 세트 탭</td><td>파츠 목록(이름·썸네일·가격), 보유 여부, Curator. Username's Shop에는 미노출</td><td><span class="badge badge-ok">PASS</span></td><td></td></tr>
+          <tr><td>4</td><td>App</td><td>장착</td><td>기존 아이템 장착 상태</td><td>세트 탭</td><td>기존 슬롯 비워지고 세트 파츠(컬러 포함) 일괄 착용</td><td><span class="badge" style="background:rgba(122,127,154,0.15);color:var(--muted);border:1px solid rgba(122,127,154,0.3)">미확인</span></td><td></td></tr>
+          <tr style="background:rgba(246,107,107,0.05)"><td>5</td><td>App</td><td>장착</td><td>세트 착용 상태</td><td>뒤로가기</td><td>세트 해제, 이전 착용 상태로 원상복구</td><td><span class="badge badge-p0">FAIL</span></td><td style="color:var(--red)">악세파츠(얼굴,등), 장갑, 신발 잔류</td></tr>
+          <tr><td>6</td><td>App</td><td>장착</td><td>세트 착용 상태</td><td>다른 아이템 착용</td><td>세트 유지 + 해당 슬롯만 변경</td><td><span class="badge badge-ok">PASS</span></td><td></td></tr>
+          <tr style="background:rgba(246,107,107,0.05)"><td>7</td><td>App</td><td>구매</td><td>전체 미보유</td><td>Save 버튼</td><td>모든 파츠 구매 목록 → 구매 진행</td><td><span class="badge badge-p0">FAIL</span></td><td style="color:var(--red)">세트 구매 안됨</td></tr>
+          <tr style="background:rgba(246,107,107,0.05)"><td>8</td><td>App</td><td>구매</td><td>일부 보유</td><td>Save 버튼</td><td>미보유 파츠만 구매 진행</td><td><span class="badge badge-p0">FAIL</span></td><td></td></tr>
+          <tr style="background:rgba(246,107,107,0.05)"><td>9</td><td>App</td><td>구매</td><td>전체 보유</td><td>Save 버튼</td><td>구매 없이 단순 룩 저장</td><td><span class="badge badge-p0">FAIL</span></td><td></td></tr>
+          <tr style="background:rgba(246,107,107,0.05)"><td>10</td><td>App</td><td>구매</td><td>구매 완료</td><td>Customize 진입</td><td>파츠가 개별 카테고리별 귀속</td><td><span class="badge badge-p0">FAIL</span></td><td style="color:var(--orange)">Blocked (구매 불가)</td></tr>
+          <tr style="background:rgba(246,107,107,0.05)"><td>11</td><td>App</td><td>구매 내역</td><td>BLUC 세트 구매 완료</td><td>Item Purchases 진입</td><td>묶음 구매 내역 기록</td><td><span class="badge badge-p0">FAIL</span></td><td style="color:var(--orange)">Blocked (구매 불가)</td></tr>
+          <tr><td>12</td><td>App</td><td>구매 내역</td><td>Item Purchases 목록</td><td>Order Details 탭</td><td>구성 아이템 메타데이터 확인</td><td><span class="badge badge-ok">PASS</span></td><td></td></tr>
+          <tr><td>13</td><td>App</td><td>세트 게시</td><td>기본 상태</td><td>쇼케이스 게시 진입</td><td>안내 문구 + 인포 디테일 4항목 노출</td><td><span class="badge badge-ok">PASS</span></td><td></td></tr>
+          <tr><td>14</td><td>Hiker</td><td>운영 관리</td><td>기본 상태</td><td>Hiker > Avatar Tab</td><td>세트 리스트 + 큐레이터 Username + 마네킹 이미지</td><td><span class="badge badge-ok">PASS</span></td><td></td></tr>
+          <tr><td>15</td><td>Hiker</td><td>운영 관리</td><td>세트 리스트 노출</td><td>카드 드래그</td><td>노출 순서 변경</td><td><span class="badge" style="background:rgba(122,127,154,0.15);color:var(--muted);border:1px solid rgba(122,127,154,0.3)">미확인</span></td><td></td></tr>
+          <tr><td>16</td><td>Hiker</td><td>운영 관리</td><td>세트 리스트 노출</td><td>상단 9슬롯 Pin</td><td>지정 세트 상단 고정</td><td><span class="badge badge-ok">PASS</span></td><td></td></tr>
+          <tr><td>17</td><td>Hiker</td><td>운영 관리</td><td>Pin 9개 중 1개 비노출</td><td>Avatars 탭 확인</td><td>Pin 해제 + 나머지만 유지 (자동 보충 없음)</td><td><span class="badge badge-ok">PASS</span></td><td></td></tr>
+          <tr><td>18</td><td>Hiker</td><td>운영 관리</td><td>부적절 세트</td><td>X 처리</td><td>세트 제외 → Save 후 비노출</td><td><span class="badge badge-ok">PASS</span></td><td></td></tr>
+          <tr><td>19</td><td>Hiker</td><td>운영 관리</td><td>수동 관리 완료</td><td>Save 클릭</td><td>변경 사항 실시간 반영</td><td><span class="badge badge-ok">PASS</span></td><td></td></tr>
+          <tr><td>20</td><td>App</td><td>알림</td><td>코디가 세트 등록됨</td><td>등록 직후</td><td>"My avatar set went up on the Marketplace this week." 노티</td><td><span class="badge badge-ok">PASS</span></td><td></td></tr>
+          <tr><td>21</td><td>App</td><td>알림</td><td>2주 연속 등록</td><td>2회차 등록 직후</td><td>2회차에도 노티 발송</td><td><span class="badge badge-ok">PASS</span></td><td></td></tr>
+          <tr><td>22</td><td>App</td><td>알림</td><td>노티 수신</td><td>탭 / 30일 경과</td><td>클릭 즉시 또는 30일 후 휘발</td><td><span class="badge" style="background:rgba(122,127,154,0.15);color:var(--muted);border:1px solid rgba(122,127,154,0.3)">미확인</span></td><td></td></tr>
+          <tr><td>23</td><td>App</td><td>계정 상태</td><td>큐레이터 탈퇴</td><td>Avatars 탭 진입</td><td>해당 세트 비노출</td><td><span class="badge badge-ok">PASS</span></td><td></td></tr>
+          <tr><td>24</td><td>App</td><td>계정 상태</td><td>큐레이터 Ban</td><td>Avatars 탭 진입</td><td>해당 세트 비노출</td><td><span class="badge badge-ok">PASS</span></td><td></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">🐛 알려진 이슈</div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>이슈</th><th>심각도</th><th>상태</th></tr></thead>
+        <tbody>
+          <tr><td>세트 구매 안됨 (전체 미보유/일부/전체 보유 모든 케이스)</td><td><span class="badge badge-p0">P0 블로커</span></td><td><span class="badge badge-warn">수정 필요</span></td></tr>
+          <tr><td>뒤로가기 시 악세파츠(얼굴, 등), 장갑, 신발 원상복구 안 됨</td><td><span class="badge badge-p0">P0</span></td><td><span class="badge badge-warn">수정 필요</span></td></tr>
+          <tr><td>아바타셋 썸네일 불일치</td><td><span class="badge badge-p1">P1</span></td><td><span class="badge badge-info">확인 필요</span></td></tr>
+          <tr><td>헤드 포함 세트 재클릭 시 헤드 사라짐</td><td><span class="badge badge-p1">P1</span></td><td><span class="badge badge-info">확인 필요</span></td></tr>
+          <tr><td><code>PurchaseCreatorProducts</code> req에 <code>AvatarSetId</code> 확인 필요</td><td><span class="badge badge-p1">P1</span></td><td><span class="badge badge-info">확인 필요</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">📌 스모크에서 빠진 항목 (본 QA에서 확인 필요)</div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>PRD/피그마 항목</th><th>출처</th><th>비고</th></tr></thead>
+        <tbody>
+          <tr><td>재화 영역: BLUC 좌측 우선 배치</td><td>UX Spec, 피그마 01</td><td>BLUC+Gold 동시 노출 케이스</td></tr>
+          <tr><td>재화 영역 1줄 초과 시 2줄 처리</td><td>UX Spec, 피그마 01</td><td>긴 가격 표기</td></tr>
+          <tr><td>Detail 노출 순서 (Body > Head > Hair > ...)</td><td>UX Spec, 피그마 02</td><td>11개 슬롯 순서 검증</td></tr>
+          <tr><td>Owned 뱃지 좌상단 위치</td><td>UX Spec, 피그마 02</td><td>위치 정확성</td></tr>
+          <tr><td>Buy 영역에 보유 아이템 미노출</td><td>UX Spec, 피그마 03</td><td>구매 수정 후 확인</td></tr>
+          <tr><td>노티 Go 버튼 → Avatars 탭 앵커링</td><td>피그마 07, 08</td><td>딥링크 정상 동작</td></tr>
+          <tr><td>코스튬 Ban/마켓 내려감 → 세트 비노출</td><td>PRD</td><td>큐레이터만 테스트됨, 코스튬 미확인</td></tr>
+          <tr><td>Empty / Loading / Error 상태</td><td>PRD Edge Case</td><td>기존 마켓 패턴과 동일 대응</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<!-- ==================== QA CHECKLIST ==================== -->
+<div class="tab-panel" id="panel-checklist">
+
+  <div class="section">
+    <div class="section-title">TC-1 <span class="badge badge-p0" style="margin-left:4px;">P0</span> — 발견 (Avatars 탭 노출) <span class="badge badge-ok" style="margin-left:8px;font-size:10px">스모크 3/3 PASS</span></div>
+    <ul class="checklist">
+      <li><div class="check-box checked" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">1-1</span>Marketplace 진입 시 <code>Avatars</code> 탭 최상단(좌측) 고정 노출 <span class="badge badge-ok" style="font-size:10px;margin-left:4px">ST-1</span></div></li>
+      <li><div class="check-box checked" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">1-2</span>Avatars 탭 그리드: <strong>1줄 3슬롯</strong>, 마네킹 형식 노출 <span class="badge badge-ok" style="font-size:10px;margin-left:4px">ST-2</span></div></li>
+      <li><div class="check-box checked" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">1-3</span>세트별 정보 노출: 썸네일 + 재화 가격 (BLUC/Gold) <span class="badge badge-ok" style="font-size:10px;margin-left:4px">ST-3</span></div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">1-4</span>BLUC + Gold 동시 노출 시 → <strong>BLUC 좌측 우선 배치</strong> <span class="badge badge-warn" style="font-size:10px;margin-left:4px">스모크 미포함</span></div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">1-5</span>재화 영역 1줄 초과 시 → <strong>2줄 처리</strong> <span class="badge badge-warn" style="font-size:10px;margin-left:4px">스모크 미포함</span></div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">1-6</span>스크롤 시 최소 <strong>20줄</strong> 이상 탐색 가능</div></li>
+      <li><div class="check-box checked" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">1-7</span>큐레이터 탈퇴/Ban 시 해당 세트 <strong>비노출</strong> <span class="badge badge-ok" style="font-size:10px;margin-left:4px">ST-23,24</span></div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">1-8</span>코스튬 1개라도 Ban/마켓 내려간 경우 세트 <strong>비노출</strong> <span class="badge badge-warn" style="font-size:10px;margin-left:4px">스모크 미포함</span></div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">1-9</span>Empty / Loading / Error 상태 → 기존 마켓플레이스 타 탭 패턴과 동일 <span class="badge badge-warn" style="font-size:10px;margin-left:4px">스모크 미포함</span></div></li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <div class="section-title">TC-2 <span class="badge badge-p0" style="margin-left:4px;">P0</span> — 세트 정보 확인 & 장착 (프리뷰) <span class="badge badge-p0" style="margin-left:8px;font-size:10px">스모크 1 FAIL</span></div>
+    <ul class="checklist">
+      <li><div class="check-box checked" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">2-1</span>세트 클릭 → 세트 상세 화면 진입 (ItemTitle, Avatars 카테고리) <span class="badge badge-ok" style="font-size:10px;margin-left:4px">ST-3</span></div></li>
+      <li><div class="check-box checked" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">2-2</span>Detail 영역: 구성 파츠 목록 (썸네일 + 이름 + 개별 가격) 노출 <span class="badge badge-ok" style="font-size:10px;margin-left:4px">ST-3</span></div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">2-3</span>Detail 노출 순서: <strong>Body > Head > Hair > Tops > Bottoms > Outfit > Shoes > Headwear > Face > Hand > Back</strong> <span class="badge badge-warn" style="font-size:10px;margin-left:4px">스모크 미포함</span></div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">2-4</span>이미 보유한 아이템 → 리스트 좌상단 <strong>Owned 뱃지</strong> 노출 <span class="badge badge-warn" style="font-size:10px;margin-left:4px">스모크 미포함 (위치)</span></div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">2-5</span>Curator 영역: <code>{userName}</code> 노출 (쇼케이스 게시자)</div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">2-6</span>Price 영역: BLUC + Gold 합산 가격 노출</div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">2-7</span>세트 클릭 시 → 기존 장착 슬롯 비워지고 <strong>세트 파츠만 일괄 착용</strong> (컬러 포함) <span class="badge" style="background:rgba(122,127,154,0.15);color:var(--muted);border:1px solid rgba(122,127,154,0.3);font-size:10px;margin-left:4px">ST-4 미확인</span></div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">2-8</span>세트 착용 상태 → 뒤로가기 → <strong>이전 착용 상태 원상복구</strong> <span class="badge badge-p0" style="font-size:10px;margin-left:4px">ST-5 FAIL</span></div></li>
+      <li><div class="check-box checked" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">2-9</span>세트 착용 상태 → 다른 아이템 착용 → <strong>세트 유지 + 해당 슬롯만 변경</strong> <span class="badge badge-ok" style="font-size:10px;margin-left:4px">ST-6</span></div></li>
+      <li><div class="check-box checked" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">2-10</span><code>{Username}'s Shop</code>에는 세트 <strong>미노출</strong> <span class="badge badge-ok" style="font-size:10px;margin-left:4px">ST-3</span></div></li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <div class="section-title">TC-3 <span class="badge badge-p0" style="margin-left:4px;">P0</span> — 구매 <span class="badge badge-p0" style="margin-left:8px;font-size:10px">🚨 블로커 — 전체 FAIL</span></div>
+    <ul class="checklist">
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">3-1</span><strong>전체 미보유</strong>: 모든 파츠 구매 목록 포함 → Save 버튼 활성화 <span class="badge badge-p0" style="font-size:10px;margin-left:4px">ST-7 FAIL</span></div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">3-2</span><strong>일부 보유</strong>: 미보유 파츠만 구매 목록 포함 → Save 버튼 활성화 <span class="badge badge-p0" style="font-size:10px;margin-left:4px">ST-8 FAIL</span></div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">3-3</span><strong>전체 보유</strong>: Save 버튼 활성화 → 단순 룩 저장 (구매 X) <span class="badge badge-p0" style="font-size:10px;margin-left:4px">ST-9 FAIL</span></div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">3-4</span>이미 보유한 아이템 → Buy 영역에 <strong>미노출</strong> <span class="badge badge-warn" style="font-size:10px;margin-left:4px">스모크 미포함</span></div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">3-5</span>Buy 목록: itemTitle + 개별 가격 + X(제거) 버튼</div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">3-6</span>Total 가격: BLUC 합산 + Gold 합산 정확히 표시</div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">3-7</span>구매 완료 → 개별 파츠별 Customize 카테고리 탭에 <strong>귀속</strong> <span class="badge badge-p0" style="font-size:10px;margin-left:4px">ST-10 Blocked</span></div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">3-8</span>구매 후 인벤토리에서 개별 아이템 확인 (예: Tops 1건, Hands 1건, Head 1건)</div></li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <div class="section-title">TC-4 <span class="badge badge-p0" style="margin-left:4px;">P0</span> — 구매 내역 <span class="badge badge-p0" style="margin-left:8px;font-size:10px">Blocked (구매 불가)</span></div>
+    <ul class="checklist">
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">4-1</span>Item Purchases 목록에 세트 묶음 구매 내역 노출 <span class="badge badge-p0" style="font-size:10px;margin-left:4px">ST-11 Blocked</span></div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">4-2</span>목록 표시: <code>"Item title and {N} more"</code> + 날짜 <code>YYYY-MM-DD HH:mm:ss</code></div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">4-3</span>항목 클릭 → Order Details 진입</div></li>
+      <li><div class="check-box checked" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">4-4</span>Order Details: Items in Order 리스트 (개별 아이템 + 수량 + 가격) <span class="badge badge-ok" style="font-size:10px;margin-left:4px">ST-12</span></div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">4-5</span>Total Price 합산 정확</div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">4-6</span>Detail 페이지 내 개별 파츠 리스트 정상 노출</div></li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <div class="section-title">TC-5 <span class="badge badge-p0" style="margin-left:4px;">P0</span> — 세트 게시 (쇼케이스) <span class="badge badge-ok" style="margin-left:8px;font-size:10px">스모크 1/1 PASS</span></div>
+    <ul class="checklist">
+      <li><div class="check-box checked" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">5-1</span>아바타 쇼케이스 게시 화면: 서브타이틀 <code>"Your look may be featured as an Avatar Set in the Marketplace!"</code> <span class="badge badge-ok" style="font-size:10px;margin-left:4px">ST-13</span></div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">5-2</span><code>Upload to the showcase</code> 버튼 정상 동작</div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">5-3</span>업로드 중 로딩 → 완료 시 <code>"Successfully uploaded to the OVERDARE Showcase."</code> + Go 버튼</div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">5-4</span>Info (ⓘ) 버튼 클릭 → 세트 구성 정책 4항목 노출</div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">5-5</span>Info 내용: "Set item revenue goes to individual creators"</div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">5-6</span>Info 내용: "At least 3 costumes are required for review"</div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">5-7</span>Info 내용: "Avatars may be featured based on internal criteria"</div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">5-8</span>Info 내용: "Sets may be removed if an included costume is suspended"</div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">5-9</span>Info OK 버튼 → 모달 닫힘</div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">5-10</span><code>Visit Showcase</code> 버튼 → 웹 쇼케이스 이동</div></li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <div class="section-title">TC-6 <span class="badge badge-p1" style="margin-left:4px;">P1</span> — 세트 등록 알림 (노티) <span class="badge badge-ok" style="margin-left:8px;font-size:10px">스모크 2/3 PASS</span></div>
+    <ul class="checklist">
+      <li><div class="check-box checked" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">6-1</span>세트 등록 시 큐레이터에게 노티 발송 <span class="badge badge-ok" style="font-size:10px;margin-left:4px">ST-20</span></div></li>
+      <li><div class="check-box checked" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">6-2</span>노티 문구: <code>"My avatar set went up on the Marketplace this week."</code> <span class="badge badge-ok" style="font-size:10px;margin-left:4px">ST-20</span></div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">6-3</span>노티에 아바타 썸네일 이미지 함께 노출</div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">6-4</span>Go 버튼 클릭 → Avatars 탭 내 해당 아바타 <strong>Actived + 앵커링</strong> <span class="badge badge-warn" style="font-size:10px;margin-left:4px">스모크 미포함</span></div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">6-5</span>노티 클릭 시 <strong>즉시 휘발</strong> <span class="badge" style="background:rgba(122,127,154,0.15);color:var(--muted);border:1px solid rgba(122,127,154,0.3);font-size:10px;margin-left:4px">ST-22 미확인</span></div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">6-6</span>노티 미클릭 → <strong>30일 후 휘발</strong> <span class="badge" style="background:rgba(122,127,154,0.15);color:var(--muted);border:1px solid rgba(122,127,154,0.3);font-size:10px;margin-left:4px">ST-22 미확인</span></div></li>
+      <li><div class="check-box checked" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">6-7</span>2연속 세트 등록 시에도 매번 노티 발송 <span class="badge badge-ok" style="font-size:10px;margin-left:4px">ST-21</span></div></li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <div class="section-title">TC-7 <span class="badge badge-p0" style="margin-left:4px;">P0</span> — 운영 관리 (Hiker) <span class="badge badge-ok" style="margin-left:8px;font-size:10px">스모크 5/6 PASS</span></div>
+    <ul class="checklist">
+      <li><div class="check-box checked" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">7-1</span>Hiker > Avatar Tab (new) 진입 확인 <span class="badge badge-ok" style="font-size:10px;margin-left:4px">ST-14</span></div></li>
+      <li><div class="check-box checked" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">7-2</span>세트 리스트: Username (큐레이터) + 마네킹 이미지 노출 <span class="badge badge-ok" style="font-size:10px;margin-left:4px">ST-14</span></div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">7-3</span>등록 조건: 바디 + 코스튬 파츠 3개 이상 (마켓 판매 중인 아이템만)</div></li>
+      <li><div class="check-box" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">7-4</span>드래그로 노출 순서 조정 가능 <span class="badge" style="background:rgba(122,127,154,0.15);color:var(--muted);border:1px solid rgba(122,127,154,0.3);font-size:10px;margin-left:4px">ST-15 미확인</span></div></li>
+      <li><div class="check-box checked" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">7-5</span><strong>Pin 기능</strong>: 상단 9슬롯(3줄) 수동 지정 <span class="badge badge-ok" style="font-size:10px;margin-left:4px">ST-16</span></div></li>
+      <li><div class="check-box checked" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">7-6</span>Pin된 세트 비노출 시 → Pin 상태에서 제외 + 자동 비노출 (자동 보충 안 됨) <span class="badge badge-ok" style="font-size:10px;margin-left:4px">ST-17</span></div></li>
+      <li><div class="check-box checked" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">7-7</span><strong>수동 제외</strong>: 부적절한 세트 X 처리 <span class="badge badge-ok" style="font-size:10px;margin-left:4px">ST-18</span></div></li>
+      <li><div class="check-box checked" onclick="this.classList.toggle('checked')"></div><div class="check-label"><span class="tc-id">7-8</span>SAVE → Avatars 탭에 실시간 반영 <span class="badge badge-ok" style="font-size:10px;margin-left:4px">ST-19</span></div></li>
+    </ul>
+  </div>
+
+</div>
+
+<!-- ==================== TEST SCENARIOS ==================== -->
+<div class="tab-panel" id="panel-scenarios">
+
+  <div class="section">
+    <div class="section-title">S-1. 세트 발견 → 정보 확인 → 구매 E2E</div>
+    <div class="precond">테스트 계정 (BLUC 충분, 세트 아이템 미보유)</div>
+    <div class="steps">
+      <div class="step step-header"><div class="step-num">#</div><div class="step-cell">행동</div><div class="step-cell">기대 결과</div><div class="step-cell">확인 포인트</div></div>
+      <div class="step"><div class="step-num">1</div><div class="step-cell">Marketplace 진입 → Avatars 탭 클릭</div><div class="step-cell">Avatars 탭 최상단, 1줄 3슬롯 그리드 노출</div><div class="step-cell">탭 위치, 그리드 형식</div></div>
+      <div class="step"><div class="step-num">2</div><div class="step-cell">세트 A 클릭</div><div class="step-cell">세트 프리뷰 + Detail (파츠 목록) 노출, 캐릭터에 세트 일괄 착용</div><div class="step-cell">Detail 순서, Curator 이름</div></div>
+      <div class="step"><div class="step-num">3</div><div class="step-cell">Save 버튼 클릭</div><div class="step-cell">Buy 목록: 미보유 아이템만 표시, Total 가격 합산</div><div class="step-cell">보유 아이템 미노출</div></div>
+      <div class="step"><div class="step-num">4</div><div class="step-cell">Buy 버튼 클릭 → 구매 진행</div><div class="step-cell">구매 완료, 개별 파츠별 인벤토리 귀속</div><div class="step-cell">Customize에서 개별 확인</div></div>
+      <div class="step"><div class="step-num">5</div><div class="step-cell">Item Purchases 진입</div><div class="step-cell">묶음 구매 내역 노출</div><div class="step-cell">"Item title and {N} more"</div></div>
+      <div class="step"><div class="step-num">6</div><div class="step-cell">구매 내역 클릭 → Order Details</div><div class="step-cell">개별 아이템 + 수량 + 가격, Total 정확</div><div class="step-cell">합산 정확성</div></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">S-2. 일부 보유 상태에서 세트 구매</div>
+    <div class="precond">세트 B의 아이템 중 2개 이미 보유</div>
+    <div class="steps">
+      <div class="step step-header"><div class="step-num">#</div><div class="step-cell">행동</div><div class="step-cell">기대 결과</div><div class="step-cell">확인 포인트</div></div>
+      <div class="step"><div class="step-num">1</div><div class="step-cell">세트 B 클릭</div><div class="step-cell">Detail에서 보유 아이템에 Owned 뱃지 표시</div><div class="step-cell">Owned 뱃지 위치 (좌상단)</div></div>
+      <div class="step"><div class="step-num">2</div><div class="step-cell">Save 클릭</div><div class="step-cell">Buy 목록에 미보유 아이템만 표시, 보유 아이템 미노출</div><div class="step-cell">보유 아이템 필터링</div></div>
+      <div class="step"><div class="step-num">3</div><div class="step-cell">Buy 진행</div><div class="step-cell">미보유분만 구매, Total 가격은 미보유분 합산</div><div class="step-cell">가격 정확성</div></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">S-3. 전체 보유 상태에서 Save</div>
+    <div class="precond">세트 C의 모든 아이템 이미 보유</div>
+    <div class="steps">
+      <div class="step step-header"><div class="step-num">#</div><div class="step-cell">행동</div><div class="step-cell">기대 결과</div><div class="step-cell">확인 포인트</div></div>
+      <div class="step"><div class="step-num">1</div><div class="step-cell">세트 C 클릭 → Save</div><div class="step-cell">Buy 목록 비어있음, 단순 룩 저장</div><div class="step-cell">구매 없이 룩 저장만</div></div>
+      <div class="step"><div class="step-num">2</div><div class="step-cell">Customize에서 착용 상태 확인</div><div class="step-cell">세트 파츠가 장착된 상태</div><div class="step-cell">결제 미발생</div></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">S-4. 세트 장착/해제 동작</div>
+    <div class="precond">아이템 A 장착 중인 계정</div>
+    <div class="steps">
+      <div class="step step-header"><div class="step-num">#</div><div class="step-cell">행동</div><div class="step-cell">기대 결과</div><div class="step-cell">확인 포인트</div></div>
+      <div class="step"><div class="step-num">1</div><div class="step-cell">Avatars 탭 → 세트 클릭</div><div class="step-cell">기존 아이템 A 해제, 세트 파츠 일괄 착용 (컬러 포함)</div><div class="step-cell">슬롯 클리어 + 세트 착용</div></div>
+      <div class="step"><div class="step-num">2</div><div class="step-cell">뒤로가기</div><div class="step-cell">세트 해제 → 아이템 A 원상복구</div><div class="step-cell">이전 상태 복원</div></div>
+      <div class="step"><div class="step-num">3</div><div class="step-cell">세트 착용 상태 → 다른 모자 아이템 착용</div><div class="step-cell">세트 유지 + 모자 슬롯만 변경</div><div class="step-cell">나머지 세트 파츠 유지</div></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">S-5. 쇼케이스 게시 → 노티 수신</div>
+    <div class="precond">큐레이터 계정, 코디 게시 가능</div>
+    <div class="steps">
+      <div class="step step-header"><div class="step-num">#</div><div class="step-cell">행동</div><div class="step-cell">기대 결과</div><div class="step-cell">확인 포인트</div></div>
+      <div class="step"><div class="step-num">1</div><div class="step-cell">아바타 쇼케이스 업로드 화면 진입</div><div class="step-cell">서브타이틀 디스크립션 노출 + Info 버튼</div><div class="step-cell">문구 정확성</div></div>
+      <div class="step"><div class="step-num">2</div><div class="step-cell">Upload to the showcase 클릭</div><div class="step-cell">로딩 → 완료 토스트 + Go 버튼</div><div class="step-cell">업로드 성공</div></div>
+      <div class="step"><div class="step-num">3</div><div class="step-cell">(운영팀이 세트로 등록)</div><div class="step-cell">큐레이터에게 노티 발송</div><div class="step-cell">노티 문구, 썸네일</div></div>
+      <div class="step"><div class="step-num">4</div><div class="step-cell">Notification > Go 클릭</div><div class="step-cell">Avatars 탭 → 해당 세트 Actived + 앵커링</div><div class="step-cell">딥링크 정상</div></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">S-6. 비노출 케이스</div>
+    <div class="precond">운영자 Hiker 접근 가능</div>
+    <div class="steps">
+      <div class="step step-header"><div class="step-num">#</div><div class="step-cell">행동</div><div class="step-cell">기대 결과</div><div class="step-cell">확인 포인트</div></div>
+      <div class="step"><div class="step-num">1</div><div class="step-cell">큐레이터 계정 Ban 처리</div><div class="step-cell">해당 큐레이터의 세트 전체 비노출</div><div class="step-cell">Avatars 탭에서 미노출</div></div>
+      <div class="step"><div class="step-num">2</div><div class="step-cell">세트 구성 코스튬 1개 Ban</div><div class="step-cell">해당 세트 비노출</div><div class="step-cell">다른 세트에는 영향 없음</div></div>
+      <div class="step"><div class="step-num">3</div><div class="step-cell">세트 구성 코스튬 1개 마켓에서 내림</div><div class="step-cell">해당 세트 비노출</div><div class="step-cell">실시간 반영</div></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ==================== UX SPEC ==================== -->
+<div class="tab-panel" id="panel-uxspec">
+
+  <div class="alert alert-purple" style="margin-bottom:20px">
+    <span>💡</span>
+    <div class="alert-text">각 스펙 항목에 <strong>해당 피그마 화면</strong>을 같이 표시했습니다. 이미지를 클릭하면 라이트박스로 확대됩니다.</div>
+  </div>
+
+  <!-- ① 아바타 세트 노출 - 재화 영역 -->
+  <div class="section">
+    <div class="section-title">🎨 ① 재화 영역 — Avatars 탭 그리드 카드</div>
+    <div style="display:grid;grid-template-columns:240px 1fr;gap:16px;align-items:start">
+      <div style="cursor:pointer;border:1px solid var(--border);border-radius:10px;overflow:hidden" onclick="openLightbox(0)">
+        <img src="figma/01_아바타세트노출.png" style="width:100%;display:block" alt="피그마 01">
+        <div style="padding:6px 10px;background:var(--surface2);font-size:11px;color:var(--accent);font-weight:600;text-align:center">01. 아바타 세트 노출 (클릭 확대)</div>
+      </div>
+      <div class="card" style="margin:0">
+        <h3 style="color:#fff;margin-bottom:10px;font-size:14px">재화 배치 규칙</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>위치</th><th>규칙</th><th>확인 포인트</th></tr></thead>
+            <tbody>
+              <tr><td>그리드 카드 하단</td><td>BLUC + Gold 동시 노출 → <strong style="color:var(--accent)">BLUC 좌측 우선 배치</strong></td><td>카드 내 재화 아이콘 순서</td></tr>
+              <tr><td>그리드 카드 하단</td><td>재화 영역 1줄 초과 → <strong style="color:var(--accent)">2줄 처리</strong></td><td>긴 가격 값(100,000+) 테스트</td></tr>
+              <tr><td>그리드 전체</td><td>1줄 3슬롯 마네킹 형식</td><td>피그마 좌측 "기본(Default)" 참고</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div style="margin-top:10px;padding:8px 12px;background:rgba(46,196,182,0.08);border:1px solid rgba(46,196,182,0.2);border-radius:6px;font-size:12px;color:var(--accent)">
+          📍 화면 위치: Marketplace > <strong>Avatars 탭</strong> > 그리드 카드 각 셀의 <strong>하단 재화 표시 영역</strong>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ② 세트 정보 확인 - Detail 순서 & Owned -->
+  <div class="section">
+    <div class="section-title">🔍 ② 세트 정보 확인 — 세트 상세 화면</div>
+    <div style="display:grid;grid-template-columns:240px 1fr;gap:16px;align-items:start">
+      <div style="cursor:pointer;border:1px solid var(--border);border-radius:10px;overflow:hidden" onclick="openLightbox(1)">
+        <img src="figma/02_세트정보확인.png" style="width:100%;display:block" alt="피그마 02">
+        <div style="padding:6px 10px;background:var(--surface2);font-size:11px;color:var(--accent);font-weight:600;text-align:center">02. 세트 정보 확인 (클릭 확대)</div>
+      </div>
+      <div>
+        <div class="card" style="margin:0 0 12px 0">
+          <h3 style="color:#fff;margin-bottom:10px;font-size:14px">Detail 영역 — 파츠 노출 순서</h3>
+          <p style="color:var(--muted);font-size:12px;margin-bottom:10px">피그마 우측 리스트에서 위→아래 순서 확인</p>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+            <code style="background:var(--accent);color:#fff;padding:2px 8px;border-radius:4px">1. Body</code>
+            <span style="color:var(--muted)">→</span>
+            <code>2. Head</code> <span style="color:var(--muted)">→</span>
+            <code>3. Hair</code> <span style="color:var(--muted)">→</span>
+            <code>4. Tops</code> <span style="color:var(--muted)">→</span>
+            <code>5. Bottoms</code> <span style="color:var(--muted)">→</span>
+            <code>6. Outfit</code> <span style="color:var(--muted)">→</span>
+            <code>7. Shoes</code> <span style="color:var(--muted)">→</span>
+            <code>8. Headwear</code> <span style="color:var(--muted)">→</span>
+            <code>9. Face</code> <span style="color:var(--muted)">→</span>
+            <code>10. Hand</code> <span style="color:var(--muted)">→</span>
+            <code>11. Back</code>
+          </div>
+        </div>
+        <div class="card" style="margin:0">
+          <h3 style="color:#fff;margin-bottom:8px;font-size:14px">Owned 뱃지 위치</h3>
+          <p style="color:var(--muted);font-size:13px">이미 보유한 아이템 → 파츠 리스트 각 행의 <strong style="color:var(--accent)">좌상단에 "Owned" 뱃지</strong></p>
+          <div style="margin-top:10px;padding:8px 12px;background:rgba(46,196,182,0.08);border:1px solid rgba(46,196,182,0.2);border-radius:6px;font-size:12px;color:var(--accent)">
+            📍 화면 위치: 세트 카드 클릭 → 상세 화면 → <strong>우측 Detail 파츠 리스트</strong> 각 행의 썸네일 좌상단
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ③ 세트 구매 - Buy 영역 -->
+  <div class="section">
+    <div class="section-title">🛒 ③ 세트 구매 — Save/Buy 바텀시트</div>
+    <div style="display:grid;grid-template-columns:240px 1fr;gap:16px;align-items:start">
+      <div style="cursor:pointer;border:1px solid var(--border);border-radius:10px;overflow:hidden" onclick="openLightbox(2)">
+        <img src="figma/03_세트구매.png" style="width:100%;display:block" alt="피그마 03">
+        <div style="padding:6px 10px;background:var(--surface2);font-size:11px;color:var(--accent);font-weight:600;text-align:center">03. 세트 구매 (클릭 확대)</div>
+      </div>
+      <div class="card" style="margin:0">
+        <h3 style="color:#fff;margin-bottom:10px;font-size:14px">Buy 영역 규칙</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>조건</th><th>Buy 영역</th><th>확인 위치</th></tr></thead>
+            <tbody>
+              <tr><td>전체 미보유</td><td>모든 파츠 표시 (itemTitle + 가격 + X)</td><td>피그마 좌측 "전부 미보유" 케이스</td></tr>
+              <tr><td>일부 보유</td><td><strong style="color:var(--accent)">미보유 파츠만 표시</strong> (보유 아이템 미노출)</td><td>피그마 우측 "이미 보유" 케이스</td></tr>
+              <tr><td>전체 보유</td><td>Buy 목록 비어 있음 → 단순 룩 저장</td><td>Save 버튼만 활성화</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div style="margin-top:10px;padding:8px 12px;background:rgba(46,196,182,0.08);border:1px solid rgba(46,196,182,0.2);border-radius:6px;font-size:12px;color:var(--accent)">
+          📍 화면 위치: 세트 상세 → <strong>Save 버튼 클릭</strong> → 나타나는 <strong>Buy 바텀시트</strong> 내 아이템 리스트
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ④ 구매 내역 -->
+  <div class="section">
+    <div class="section-title">📋 ④ 구매 내역 — Item Purchases / Order Details</div>
+    <div style="display:grid;grid-template-columns:240px 1fr;gap:16px;align-items:start">
+      <div style="cursor:pointer;border:1px solid var(--border);border-radius:10px;overflow:hidden" onclick="openLightbox(3)">
+        <img src="figma/04_구매내역.png" style="width:100%;display:block" alt="피그마 04">
+        <div style="padding:6px 10px;background:var(--surface2);font-size:11px;color:var(--accent);font-weight:600;text-align:center">04. 구매 내역 (클릭 확대)</div>
+      </div>
+      <div class="card" style="margin:0">
+        <h3 style="color:#fff;margin-bottom:10px;font-size:14px">구매 내역 확인 포인트</h3>
+        <ul style="list-style:disc;padding-left:20px;color:var(--muted);font-size:13px;line-height:2">
+          <li>Item Purchases 목록: <code>"Item title and {N} more"</code> + 날짜</li>
+          <li>Order Details: 개별 파츠 리스트 (이름 + 수량 + 가격)</li>
+          <li>Total Price 합산 정확성</li>
+        </ul>
+        <div style="margin-top:10px;padding:8px 12px;background:rgba(46,196,182,0.08);border:1px solid rgba(46,196,182,0.2);border-radius:6px;font-size:12px;color:var(--accent)">
+          📍 화면 위치: 프로필 → <strong>Item Purchases</strong> → 해당 주문 클릭 → <strong>Order Details</strong> 페이지
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ⑤ 업로드 & Info -->
+  <div class="section">
+    <div class="section-title">📤 ⑤ 쇼케이스 업로드 & Info 모달</div>
+    <div style="display:grid;grid-template-columns:240px 240px 1fr;gap:16px;align-items:start">
+      <div style="cursor:pointer;border:1px solid var(--border);border-radius:10px;overflow:hidden" onclick="openLightbox(4)">
+        <img src="figma/05_업로드flow.png" style="width:100%;display:block" alt="피그마 05">
+        <div style="padding:6px 10px;background:var(--surface2);font-size:11px;color:var(--accent);font-weight:600;text-align:center">05. 업로드 Flow</div>
+      </div>
+      <div style="cursor:pointer;border:1px solid var(--border);border-radius:10px;overflow:hidden" onclick="openLightbox(5)">
+        <img src="figma/06_info버튼.png" style="width:100%;display:block" alt="피그마 06">
+        <div style="padding:6px 10px;background:var(--surface2);font-size:11px;color:var(--accent);font-weight:600;text-align:center">06. Info 버튼</div>
+      </div>
+      <div class="card" style="margin:0">
+        <h3 style="color:#fff;margin-bottom:10px;font-size:14px">업로드 화면</h3>
+        <ul style="list-style:disc;padding-left:20px;color:var(--muted);font-size:13px;line-height:2">
+          <li>서브타이틀: <code>"Your look may be featured…"</code></li>
+          <li>Upload → 로딩 → 완료 + Go 버튼</li>
+          <li>Info(ⓘ) 버튼 → 정책 4항목 모달</li>
+        </ul>
+        <div style="margin-top:10px;padding:8px 12px;background:rgba(46,196,182,0.08);border:1px solid rgba(46,196,182,0.2);border-radius:6px;font-size:12px;color:var(--accent)">
+          📍 화면 위치: Customize → <strong>쇼케이스 공유 버튼</strong> → 업로드 화면<br>
+          📍 Info 버튼: 업로드 화면 <strong>우상단 ⓘ 아이콘</strong>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ⑥ 노티피케이션 & 진입 경로 -->
+  <div class="section">
+    <div class="section-title">🔔 ⑥ 노티피케이션 & 진입 경로</div>
+    <div style="display:grid;grid-template-columns:240px 240px 1fr;gap:16px;align-items:start">
+      <div style="cursor:pointer;border:1px solid var(--border);border-radius:10px;overflow:hidden" onclick="openLightbox(6)">
+        <img src="figma/07_노티피케이션.png" style="width:100%;display:block" alt="피그마 07">
+        <div style="padding:6px 10px;background:var(--surface2);font-size:11px;color:var(--accent);font-weight:600;text-align:center">07. 노티피케이션</div>
+      </div>
+      <div style="cursor:pointer;border:1px solid var(--border);border-radius:10px;overflow:hidden" onclick="openLightbox(7)">
+        <img src="figma/08_노티진입경로.png" style="width:100%;display:block" alt="피그마 08">
+        <div style="padding:6px 10px;background:var(--surface2);font-size:11px;color:var(--accent);font-weight:600;text-align:center">08. 노티 진입 경로</div>
+      </div>
+      <div class="card" style="margin:0">
+        <h3 style="color:#fff;margin-bottom:10px;font-size:14px">노티 동작 규칙</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>동작</th><th>결과</th><th>확인 위치</th></tr></thead>
+            <tbody>
+              <tr><td>세트 등록됨</td><td>썸네일 + 메시지 노티</td><td>피그마 07 노티 리스트</td></tr>
+              <tr><td>Go 버튼 클릭</td><td>Avatars 탭 → 해당 세트 <strong style="color:var(--accent)">Actived + 앵커링</strong></td><td>피그마 08 랜딩 화면</td></tr>
+              <tr><td>노티 탭</td><td>즉시 휘발</td><td>노티 리스트에서 사라짐</td></tr>
+              <tr><td>30일 경과</td><td>자동 휘발</td><td>노티 리스트에서 사라짐</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div style="margin-top:10px;padding:8px 12px;background:rgba(46,196,182,0.08);border:1px solid rgba(46,196,182,0.2);border-radius:6px;font-size:12px;color:var(--accent)">
+          📍 화면 위치: 앱 하단 <strong>Notification 탭</strong> → 노티 카드 → <strong>Go 버튼</strong><br>
+          📍 랜딩: Marketplace > Avatars 탭 > <strong>해당 세트가 활성화 + 스크롤 앵커링</strong>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ==================== L10N ==================== -->
+<div class="tab-panel" id="panel-l10n">
+
+  <div class="section">
+    <div class="section-title">🌐 L10N 키 목록</div>
+
+    <h3 style="color:#fff;margin:20px 0 12px;font-size:14px">store</h3>
+    <div class="tbl-wrap" style="margin-bottom:20px">
+      <table>
+        <thead><tr><th>#</th><th>Key</th><th>EN</th><th>PT</th><th>ES</th><th>HI</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td class="l10n-key">APP_STO_STORE_CATEGORY_AVATARS</td><td>Avatars</td><td>Avatares</td><td>Avatares</td><td>अवतार</td></tr>
+          <tr><td>2</td><td class="l10n-key">APP_STO_STORE_ITEM_CURATOR_TEXT</td><td>Curator</td><td>Curador</td><td>Curador</td><td>क्यूरेटर</td></tr>
+          <tr><td>3</td><td class="l10n-key">APP_STO_STORE_ITEM_OWNED_TEXT</td><td>Owned</td><td>Seu</td><td>Tuyo</td><td>मेरा</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 style="color:#fff;margin:20px 0 12px;font-size:14px">common</h3>
+    <div class="tbl-wrap" style="margin-bottom:20px">
+      <table>
+        <thead><tr><th>#</th><th>Key</th><th>EN</th><th>PT</th><th>ES</th><th>HI</th></tr></thead>
+        <tbody>
+          <tr><td>4</td><td class="l10n-key">APP_CMN_SHARE_OVDRWEBSITE_DESC</td><td>Your look may be featured as an Avatar Set in the Marketplace!</td><td>Seu visual pode virar um Avatar Set no Marketplace!</td><td>¡Tu look podría aparecer como Avatar Set en el Marketplace!</td><td>आपका लुक Marketplace में Avatar Set बनकर फीचर हो सकता है!</td></tr>
+          <tr><td>5</td><td class="l10n-key">APP_CMN_SHARE_OVDRWEBSITE_INFO_DESC_1</td><td>Set item revenue goes to individual creators</td><td>A renda do set vai direto pro criador</td><td>Las ganancias del set van directo al creador</td><td>सेट की कमाई सीधे क्रिएटर को जाती है</td></tr>
+          <tr><td>6</td><td class="l10n-key">APP_CMN_SHARE_OVDRWEBSITE_INFO_DESC_2</td><td>At least 3 costumes are required for review</td><td>Pelo menos 3 trajes pra entrar em análise</td><td>Se requieren al menos 3 atuendos para revisión</td><td>रिव्यू के लिए कम से कम 3 कॉस्ट्यूम चाहिए</td></tr>
+          <tr><td>7</td><td class="l10n-key">APP_CMN_SHARE_OVDRWEBSITE_INFO_DESC_3</td><td>Avatars may be featured based on internal criteria</td><td>Avatares podem ser destacados com base em critérios internos</td><td>Los avatares pueden destacarse según criterios internos</td><td>अवतार आंतरिक मानदंडों के आधार पर फीचर हो सकते हैं</td></tr>
+          <tr><td>8</td><td class="l10n-key">APP_CMN_SHARE_OVDRWEBSITE_INFO_DESC_4</td><td>Sets may be removed if an included costume is suspended</td><td>O set pode ser removido se algum traje for suspenso</td><td>El set puede eliminarse si algún atuendo es suspendido</td><td>अगर कोई कॉस्ट्यूम सस्पेंड हुआ, तो सेट हटाया जा सकता है</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 style="color:#fff;margin:20px 0 12px;font-size:14px">system / app_noti</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>#</th><th>Key</th><th>EN</th><th>PT</th><th>ES</th><th>HI</th></tr></thead>
+        <tbody>
+          <tr><td>9</td><td class="l10n-key">APP_SYS_NOTIFICATION_NOTITAB_MSG_MY_AVATARS_BTN</td><td>Go</td><td>Bora</td><td>Vamos</td><td>चलो</td></tr>
+          <tr><td>10</td><td class="l10n-key">APP_NOTI_MY_AVATARS_STO</td><td>My avatar set went up on the Marketplace this week.</td><td>Meu avatar set acabou de chegar no Marketplace essa semana!</td><td>¡Mi avatar set salió en el Marketplace esta semana!</td><td>मेरा Avatar Set इस हफ्ते Marketplace में लाइव हो गया!</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<!-- ==================== FIGMA ==================== -->
+<div class="tab-panel" id="panel-figma">
+
+  <div class="section">
+    <div class="section-title">🎨 Figma 디자인 레퍼런스</div>
+    <div class="figma-grid">
+      <div class="figma-card" onclick="openLightbox(0)">
+        <img src="figma/01_아바타세트노출.png" alt="아바타 세트 노출">
+        <div class="figma-card-body">
+          <div class="figma-card-title">01. 아바타 세트 노출</div>
+          <div class="figma-card-desc">재화 Default / 재화 2줄 노출 케이스</div>
+        </div>
+      </div>
+      <div class="figma-card" onclick="openLightbox(1)">
+        <img src="figma/02_세트정보확인.png" alt="세트 정보 확인">
+        <div class="figma-card-body">
+          <div class="figma-card-title">02. 세트 정보 확인</div>
+          <div class="figma-card-desc">전부 미보유 / 이미 보유 아이템 있는 경우</div>
+        </div>
+      </div>
+      <div class="figma-card" onclick="openLightbox(2)">
+        <img src="figma/03_세트구매.png" alt="세트 구매">
+        <div class="figma-card-body">
+          <div class="figma-card-title">03. 세트 구매</div>
+          <div class="figma-card-desc">전부 미보유 / 이미 보유 아이템 있는 경우</div>
+        </div>
+      </div>
+      <div class="figma-card" onclick="openLightbox(3)">
+        <img src="figma/04_구매내역.png" alt="구매 내역">
+        <div class="figma-card-body">
+          <div class="figma-card-title">04. 구매 내역</div>
+          <div class="figma-card-desc">Item Purchases + Order Details</div>
+        </div>
+      </div>
+      <div class="figma-card" onclick="openLightbox(4)">
+        <img src="figma/05_업로드flow.png" alt="업로드 flow">
+        <div class="figma-card-body">
+          <div class="figma-card-title">05. 업로드 Flow</div>
+          <div class="figma-card-desc">쇼케이스 업로드 → 완료</div>
+        </div>
+      </div>
+      <div class="figma-card" onclick="openLightbox(5)">
+        <img src="figma/06_info버튼.png" alt="Info 버튼">
+        <div class="figma-card-body">
+          <div class="figma-card-title">06. Info 버튼</div>
+          <div class="figma-card-desc">세트 구성 정책 안내</div>
+        </div>
+      </div>
+      <div class="figma-card" onclick="openLightbox(6)">
+        <img src="figma/07_노티피케이션.png" alt="노티피케이션">
+        <div class="figma-card-body">
+          <div class="figma-card-title">07. 노티피케이션</div>
+          <div class="figma-card-desc">노티 진입 경로 + 앵커링</div>
+        </div>
+      </div>
+      <div class="figma-card" onclick="openLightbox(7)">
+        <img src="figma/08_노티진입경로.png" alt="노티 진입 경로">
+        <div class="figma-card-body">
+          <div class="figma-card-title">08. 노티 진입 경로</div>
+          <div class="figma-card-desc">페이지 랜딩 및 앵커링</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+</div><!-- /content -->
+
+<div class="lightbox" id="lightbox">
+  <button class="lightbox-close" onclick="closeLightbox()" title="닫기">✕</button>
+  <button class="lightbox-nav lightbox-prev" onclick="navLightbox(-1)" title="이전">‹</button>
+  <button class="lightbox-nav lightbox-next" onclick="navLightbox(1)" title="다음">›</button>
+  <img id="lightbox-img" src="" alt="">
+  <div class="lightbox-title" id="lightbox-title"></div>
+</div>
+
+<script>
+function switchTab(id) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  var tabs = document.querySelectorAll('.tab');
+  tabs.forEach(function(t) {
+    if (t.getAttribute('onclick') && t.getAttribute('onclick').indexOf("'" + id + "'") !== -1) t.classList.add('active');
+  });
+  document.getElementById('panel-' + id).classList.add('active');
+}
+
+var lbImages = [
+  { src: 'figma/01_아바타세트노출.png', title: '01. 아바타 세트 노출' },
+  { src: 'figma/02_세트정보확인.png', title: '02. 세트 정보 확인' },
+  { src: 'figma/03_세트구매.png', title: '03. 세트 구매' },
+  { src: 'figma/04_구매내역.png', title: '04. 구매 내역' },
+  { src: 'figma/05_업로드flow.png', title: '05. 업로드 Flow' },
+  { src: 'figma/06_info버튼.png', title: '06. Info 버튼' },
+  { src: 'figma/07_노티피케이션.png', title: '07. 노티피케이션' },
+  { src: 'figma/08_노티진입경로.png', title: '08. 노티 진입 경로' }
+];
+var lbIdx = 0;
+
+function openLightbox(i) {
+  lbIdx = i;
+  document.getElementById('lightbox-img').src = lbImages[i].src;
+  document.getElementById('lightbox-title').textContent = lbImages[i].title;
+  document.getElementById('lightbox').classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('active');
+  document.body.style.overflow = '';
+}
+function navLightbox(dir) {
+  lbIdx = (lbIdx + dir + lbImages.length) % lbImages.length;
+  document.getElementById('lightbox-img').src = lbImages[lbIdx].src;
+  document.getElementById('lightbox-title').textContent = lbImages[lbIdx].title;
+}
+document.getElementById('lightbox').addEventListener('click', function(e) {
+  if (e.target === this) closeLightbox();
+});
+document.addEventListener('keydown', function(e) {
+  if (!document.getElementById('lightbox').classList.contains('active')) return;
+  if (e.key === 'Escape') closeLightbox();
+  if (e.key === 'ArrowLeft') navLightbox(-1);
+  if (e.key === 'ArrowRight') navLightbox(1);
+});
+</script>
+</body>
+</html>
