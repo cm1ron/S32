@@ -101,6 +101,30 @@
   .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px 20px; flex: 1; min-width: 160px; text-align: center; }
   .stat-val { font-size: 28px; font-weight: 800; color: var(--accent); }
   .stat-label { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+  .figma-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+  .figma-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; cursor: pointer; transition: border-color 0.15s; }
+  .figma-card:hover { border-color: var(--accent); }
+  .figma-card img { width: 100%; height: 180px; object-fit: cover; border-bottom: 1px solid var(--border); }
+  .figma-card-body { padding: 10px 14px; }
+  .figma-card-title { font-weight: 700; color: #fff; font-size: 12px; margin-bottom: 2px; }
+  .figma-card-desc { font-size: 11px; color: var(--muted); }
+
+  .lightbox { display:none; position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,0.85); backdrop-filter:blur(6px); align-items:center; justify-content:center; }
+  .lightbox.active { display:flex; }
+  .lightbox-close { position:fixed; top:16px; right:16px; z-index:10000; width:40px; height:40px; border-radius:50%; border:1px solid rgba(255,255,255,0.2); background:rgba(30,30,40,0.8); color:#fff; font-size:20px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.15s; }
+  .lightbox-close:hover { background:var(--red); border-color:var(--red); transform:scale(1.1); }
+  .lightbox-title { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); color:#fff; font-size:14px; font-weight:600; background:rgba(30,30,40,0.8); padding:6px 16px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); z-index:10000; white-space:nowrap; }
+  .lightbox img { max-width:92vw; max-height:88vh; object-fit:contain; border-radius:8px; box-shadow:0 8px 40px rgba(0,0,0,0.5); }
+  .lightbox-nav { position:fixed; top:50%; transform:translateY(-50%); z-index:10000; width:44px; height:44px; border-radius:50%; border:1px solid rgba(255,255,255,0.2); background:rgba(30,30,40,0.8); color:#fff; font-size:22px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.15s; }
+  .lightbox-nav:hover { background:var(--accent); border-color:var(--accent); }
+  .lightbox-prev { left:16px; }
+  .lightbox-next { right:16px; }
+
+  .alert { border-radius: 8px; padding: 12px 16px; margin-bottom: 14px; font-size: 13px; display: flex; gap: 10px; align-items: flex-start; }
+  .alert-purple { background: rgba(224,82,133,0.08); border: 1px solid rgba(224,82,133,0.25); }
+  .alert-text { color: var(--text); line-height: 1.6; }
+  .alert-text strong { color: #fff; }
 </style>
 </head>
 <body>
@@ -121,9 +145,11 @@
   <div class="tab active" onclick="switchTab('overview')">Overview</div>
   <div class="tab" onclick="switchTab('checklist')">QA Checklist</div>
   <div class="tab" onclick="switchTab('scenarios')">Test Scenarios</div>
+  <div class="tab" onclick="switchTab('uxspec')">UX Spec</div>
   <div class="tab" onclick="switchTab('policy')">생성 정책</div>
   <div class="tab" onclick="switchTab('prompts')">Style Presets</div>
   <div class="tab" onclick="switchTab('errors')">에러/엣지케이스</div>
+  <div class="tab" onclick="switchTab('figma')">Figma</div>
 </div>
 
 <div class="content">
@@ -656,15 +682,319 @@
   </div>
 </div>
 
+<!-- ==================== UX SPEC ==================== -->
+<div class="tab-panel" id="panel-uxspec">
+
+  <div class="alert alert-purple" style="margin-bottom:20px">
+    <span>💡</span>
+    <div class="alert-text">각 스펙 항목에 <strong>해당 피그마 화면</strong>을 같이 표시했습니다. 이미지를 클릭하면 라이트박스로 확대됩니다.</div>
+  </div>
+
+  <!-- ① 템플릿 선택 -->
+  <div class="section">
+    <div class="section-title">📋 ① 템플릿 선택 — Step 1</div>
+    <div style="display:grid;grid-template-columns:240px 1fr;gap:16px;align-items:start">
+      <div style="cursor:pointer;border:1px solid var(--border);border-radius:10px;overflow:hidden" onclick="openLightbox(0)">
+        <img src="figma/01_select_template.png" style="width:100%;display:block" alt="피그마 01">
+        <div style="padding:6px 10px;background:var(--surface2);font-size:11px;color:var(--accent);font-weight:600;text-align:center">01. 템플릿 선택 (클릭 확대)</div>
+      </div>
+      <div class="card" style="margin:0">
+        <h3 style="color:#fff;margin-bottom:10px;font-size:14px">템플릿 선택 화면</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>영역</th><th>규칙</th><th>확인 포인트</th></tr></thead>
+            <tbody>
+              <tr><td>템플릿 그리드</td><td>제공되는 AIT 템플릿 카드 리스트</td><td>카드 노출 순서, 썸네일 정확성</td></tr>
+              <tr><td>선택 인디케이터</td><td>선택된 템플릿에 하이라이트 표시</td><td>한 개만 선택 가능, 중복 선택 불가</td></tr>
+              <tr><td>다음 단계 CTA</td><td>템플릿 선택 후 "Next" 또는 직접 진행</td><td>미선택 시 다음 단계 비활성화</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div style="margin-top:10px;padding:8px 12px;background:rgba(224,82,133,0.08);border:1px solid rgba(224,82,133,0.2);border-radius:6px;font-size:12px;color:var(--accent)">
+          📍 화면 위치: Hub > <strong>AIT 생성 진입</strong> > <strong>Step 1: 템플릿 선택</strong>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ② 방식 선택 — Choose Method -->
+  <div class="section">
+    <div class="section-title">🔀 ② 방식 선택 — AI Generate or 직접 선택</div>
+    <div style="display:grid;grid-template-columns:240px 1fr;gap:16px;align-items:start">
+      <div>
+        <div style="cursor:pointer;border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:10px" onclick="openLightbox(1)">
+          <img src="figma/02_choose_method_default.png" style="width:100%;display:block" alt="피그마 02">
+          <div style="padding:6px 10px;background:var(--surface2);font-size:11px;color:var(--accent);font-weight:600;text-align:center">02. 기본 상태 (클릭 확대)</div>
+        </div>
+        <div style="cursor:pointer;border:1px solid var(--border);border-radius:10px;overflow:hidden" onclick="openLightbox(2)">
+          <img src="figma/03_choose_method_ai_selected.png" style="width:100%;display:block" alt="피그마 03">
+          <div style="padding:6px 10px;background:var(--surface2);font-size:11px;color:var(--accent);font-weight:600;text-align:center">03. AI 선택 상태 (클릭 확대)</div>
+        </div>
+      </div>
+      <div class="card" style="margin:0">
+        <h3 style="color:#fff;margin-bottom:10px;font-size:14px">방식 선택 규칙</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>방식</th><th>동작</th><th>확인 포인트</th></tr></thead>
+            <tbody>
+              <tr><td><strong style="color:var(--accent)">AI Generate</strong></td><td>프롬프트 입력 → AI 이미지 생성</td><td>선택 시 하이라이트 + 프롬프트 입력 화면 전환</td></tr>
+              <tr><td>직접 선택</td><td>갤러리에서 기존 이미지 선택</td><td>선택 시 갤러리 화면 전환</td></tr>
+              <tr><td>기본 상태</td><td>아무것도 선택되지 않은 초기 상태</td><td>양쪽 모두 비활성, Next 비활성화</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div style="margin-top:10px;padding:8px 12px;background:rgba(224,82,133,0.08);border:1px solid rgba(224,82,133,0.2);border-radius:6px;font-size:12px;color:var(--accent)">
+          📍 화면 위치: AIT 생성 > <strong>Step 2: Choose Method</strong> 선택 카드
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ③ AI 프롬프트 입력 -->
+  <div class="section">
+    <div class="section-title">✏️ ③ AI Generate — 프롬프트 입력</div>
+    <div style="display:grid;grid-template-columns:240px 1fr;gap:16px;align-items:start">
+      <div>
+        <div style="cursor:pointer;border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:10px" onclick="openLightbox(3)">
+          <img src="figma/04_ai_generate_empty_prompt.png" style="width:100%;display:block" alt="피그마 04">
+          <div style="padding:6px 10px;background:var(--surface2);font-size:11px;color:var(--accent);font-weight:600;text-align:center">04. 빈 프롬프트 (클릭 확대)</div>
+        </div>
+        <div style="cursor:pointer;border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:10px" onclick="openLightbox(4)">
+          <img src="figma/05_ai_generate_prompt_filled.png" style="width:100%;display:block" alt="피그마 05">
+          <div style="padding:6px 10px;background:var(--surface2);font-size:11px;color:var(--accent);font-weight:600;text-align:center">05. 프롬프트 입력 완료 (클릭 확대)</div>
+        </div>
+        <div style="cursor:pointer;border:1px solid var(--border);border-radius:10px;overflow:hidden" onclick="openLightbox(5)">
+          <img src="figma/06_ai_generate_ip_prompt.png" style="width:100%;display:block" alt="피그마 06">
+          <div style="padding:6px 10px;background:var(--surface2);font-size:11px;color:var(--accent);font-weight:600;text-align:center">06. IP 프롬프트 (클릭 확대)</div>
+        </div>
+      </div>
+      <div class="card" style="margin:0">
+        <h3 style="color:#fff;margin-bottom:10px;font-size:14px">프롬프트 입력 규칙</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>상태</th><th>동작</th><th>확인 포인트</th></tr></thead>
+            <tbody>
+              <tr><td>빈 프롬프트</td><td>플레이스홀더 텍스트 노출, Generate 비활성</td><td>빈 상태로 Generate 불가 확인</td></tr>
+              <tr><td>프롬프트 입력됨</td><td>Generate 버튼 활성화</td><td>글자수 제한, 특수문자 처리</td></tr>
+              <tr><td>Style Preset 선택</td><td>프롬프트에 스타일 태그 자동 추가</td><td>프리셋 적용 후 프롬프트 변화 확인</td></tr>
+              <tr><td>IP 프롬프트</td><td>IP 관련 키워드 입력 시 필터링</td><td>금지 키워드 차단 또는 경고 노출</td></tr>
+              <tr><td>잔여 생성 횟수</td><td>일일/총 생성 횟수 표시</td><td>횟수 차감 정확성, 0회 시 비활성화</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div style="margin-top:10px;padding:8px 12px;background:rgba(224,82,133,0.08);border:1px solid rgba(224,82,133,0.2);border-radius:6px;font-size:12px;color:var(--accent)">
+          📍 화면 위치: AI Generate > <strong>프롬프트 입력 필드</strong> + <strong>Style Preset 칩</strong> + <strong>Generate 버튼</strong>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ④ 생성 중 로딩 & 에러 -->
+  <div class="section">
+    <div class="section-title">⏳ ④ 생성 중 — 로딩 & 에러 처리</div>
+    <div style="display:grid;grid-template-columns:240px 1fr;gap:16px;align-items:start">
+      <div>
+        <div style="cursor:pointer;border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:10px" onclick="openLightbox(6)">
+          <img src="figma/07_ai_generating_loading.png" style="width:100%;display:block" alt="피그마 07">
+          <div style="padding:6px 10px;background:var(--surface2);font-size:11px;color:var(--accent);font-weight:600;text-align:center">07. 생성 중 로딩 (클릭 확대)</div>
+        </div>
+        <div style="cursor:pointer;border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:10px" onclick="openLightbox(7)">
+          <img src="figma/08_generation_failed.png" style="width:100%;display:block" alt="피그마 08">
+          <div style="padding:6px 10px;background:var(--surface2);font-size:11px;color:var(--accent);font-weight:600;text-align:center">08. 생성 실패 (클릭 확대)</div>
+        </div>
+        <div style="cursor:pointer;border:1px solid var(--border);border-radius:10px;overflow:hidden" onclick="openLightbox(9)">
+          <img src="figma/10_cancel_generation.png" style="width:100%;display:block" alt="피그마 10">
+          <div style="padding:6px 10px;background:var(--surface2);font-size:11px;color:var(--accent);font-weight:600;text-align:center">10. 생성 취소 (클릭 확대)</div>
+        </div>
+      </div>
+      <div>
+        <div class="card" style="margin:0 0 12px 0">
+          <h3 style="color:#fff;margin-bottom:10px;font-size:14px">로딩 상태</h3>
+          <div class="tbl-wrap">
+            <table>
+              <thead><tr><th>상태</th><th>UI 노출</th><th>확인 포인트</th></tr></thead>
+              <tbody>
+                <tr><td>생성 중</td><td>로딩 스피너 + 진행 메시지</td><td>스피너 애니메이션, 프로그레스 표시</td></tr>
+                <tr><td>지연 발생</td><td>"Taking longer than expected" 메시지</td><td>타임아웃 기준 시간 확인</td></tr>
+                <tr><td>취소</td><td>취소 확인 다이얼로그</td><td>취소 후 프롬프트 화면 복귀, 횟수 미차감</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card" style="margin:0">
+          <h3 style="color:#fff;margin-bottom:10px;font-size:14px">에러 처리</h3>
+          <div class="tbl-wrap">
+            <table>
+              <thead><tr><th>에러</th><th>대응</th><th>확인 포인트</th></tr></thead>
+              <tbody>
+                <tr><td>생성 실패</td><td>실패 메시지 + 재시도 버튼</td><td>재시도 시 횟수 추가 차감 여부</td></tr>
+                <tr><td>네트워크 오류</td><td>연결 에러 토스트</td><td>오프라인 상태 처리</td></tr>
+                <tr><td>콘텐츠 필터링</td><td>부적절 프롬프트 → 생성 거부</td><td>필터링 메시지 정확성</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div style="margin-top:10px;padding:8px 12px;background:rgba(224,82,133,0.08);border:1px solid rgba(224,82,133,0.2);border-radius:6px;font-size:12px;color:var(--accent)">
+            📍 화면 위치: Generate 클릭 후 <strong>로딩 화면</strong> / <strong>에러 다이얼로그</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ⑤ 생성 결과 탐색 -->
+  <div class="section">
+    <div class="section-title">🖼️ ⑤ 생성 결과 — 탐색 & 선택</div>
+    <div style="display:grid;grid-template-columns:240px 1fr;gap:16px;align-items:start">
+      <div>
+        <div style="cursor:pointer;border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:10px" onclick="openLightbox(10)">
+          <img src="figma/11_result_1of1.png" style="width:100%;display:block" alt="피그마 11">
+          <div style="padding:6px 10px;background:var(--surface2);font-size:11px;color:var(--accent);font-weight:600;text-align:center">11. 결과 1/1 (클릭 확대)</div>
+        </div>
+        <div style="cursor:pointer;border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:10px" onclick="openLightbox(12)">
+          <img src="figma/13_result_3of4.png" style="width:100%;display:block" alt="피그마 13">
+          <div style="padding:6px 10px;background:var(--surface2);font-size:11px;color:var(--accent);font-weight:600;text-align:center">13. 결과 3/4 (클릭 확대)</div>
+        </div>
+        <div style="cursor:pointer;border:1px solid var(--border);border-radius:10px;overflow:hidden" onclick="openLightbox(13)">
+          <img src="figma/14_result_3of5_0left.png" style="width:100%;display:block" alt="피그마 14">
+          <div style="padding:6px 10px;background:var(--surface2);font-size:11px;color:var(--accent);font-weight:600;text-align:center">14. 결과 3/5 · 0회 남음 (클릭 확대)</div>
+        </div>
+      </div>
+      <div class="card" style="margin:0">
+        <h3 style="color:#fff;margin-bottom:10px;font-size:14px">결과 화면 규칙</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>요소</th><th>규칙</th><th>확인 포인트</th></tr></thead>
+            <tbody>
+              <tr><td>결과 이미지</td><td>생성된 이미지 프리뷰</td><td>해상도·비율 정확성</td></tr>
+              <tr><td>페이지 인디케이터</td><td>"N of M" 형식 (예: 3 of 4)</td><td>좌우 스와이프·화살표 네비게이션</td></tr>
+              <tr><td>Tooltip</td><td>첫 생성 시 사용법 가이드 툴팁</td><td>한 번만 노출, 이후 미표시</td></tr>
+              <tr><td>잔여 횟수 0</td><td>추가 생성 비활성 + 안내 메시지</td><td>"0 left" 표시, Generate 버튼 비활성</td></tr>
+              <tr><td>최종 선택</td><td>결과 이미지 선택 → 월드에 적용</td><td>선택 확정 후 AIT 반영 확인</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div style="margin-top:10px;padding:8px 12px;background:rgba(224,82,133,0.08);border:1px solid rgba(224,82,133,0.2);border-radius:6px;font-size:12px;color:var(--accent)">
+          📍 화면 위치: 생성 완료 후 <strong>결과 프리뷰 화면</strong> > 좌우 네비게이션 > <strong>선택 확정 버튼</strong>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ==================== FIGMA ==================== -->
+<div class="tab-panel" id="panel-figma">
+
+  <div class="alert alert-purple" style="margin-bottom:20px">
+    <span>💡</span>
+    <div class="alert-text">피그마 이미지를 클릭하면 라이트박스로 확대됩니다. ← → 키 또는 좌우 버튼으로 탐색, <strong>ESC / X 버튼</strong>으로 닫기.</div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">📋 Step 1 — 템플릿 선택 & 방식 선택</div>
+    <div class="figma-grid">
+      <div class="figma-card" onclick="openLightbox(0)"><img src="figma/01_select_template.png" alt=""><div class="figma-card-body"><div class="figma-card-title">01. Select Template</div><div class="figma-card-desc">AIT 5종 템플릿 선택 화면</div></div></div>
+      <div class="figma-card" onclick="openLightbox(1)"><img src="figma/02_choose_method_default.png" alt=""><div class="figma-card-body"><div class="figma-card-title">02. Choose Method (Default)</div><div class="figma-card-desc">AI Generate / Upload 미선택 상태</div></div></div>
+      <div class="figma-card" onclick="openLightbox(2)"><img src="figma/03_choose_method_ai_selected.png" alt=""><div class="figma-card-body"><div class="figma-card-title">03. Choose Method (AI Selected)</div><div class="figma-card-desc">AI Generate 선택 → Next 활성화</div></div></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">🤖 Step 2 — AI Generate 프롬프트 & 생성</div>
+    <div class="figma-grid">
+      <div class="figma-card" onclick="openLightbox(3)"><img src="figma/04_ai_generate_empty_prompt.png" alt=""><div class="figma-card-body"><div class="figma-card-title">04. Empty Prompt</div><div class="figma-card-desc">프롬프트 미입력 상태</div></div></div>
+      <div class="figma-card" onclick="openLightbox(4)"><img src="figma/05_ai_generate_prompt_filled.png" alt=""><div class="figma-card-body"><div class="figma-card-title">05. Prompt Filled</div><div class="figma-card-desc">프롬프트 입력 + Generate 활성화</div></div></div>
+      <div class="figma-card" onclick="openLightbox(5)"><img src="figma/06_ai_generate_ip_prompt.png" alt=""><div class="figma-card-body"><div class="figma-card-title">06. IP Prompt</div><div class="figma-card-desc">IP/저작권 프롬프트 케이스</div></div></div>
+      <div class="figma-card" onclick="openLightbox(6)"><img src="figma/07_ai_generating_loading.png" alt=""><div class="figma-card-body"><div class="figma-card-title">07. Generating (Loading)</div><div class="figma-card-desc">생성 중 로딩 상태</div></div></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">🚨 에러 모달</div>
+    <div class="figma-grid">
+      <div class="figma-card" onclick="openLightbox(7)"><img src="figma/08_generation_failed.png" alt=""><div class="figma-card-body"><div class="figma-card-title">08. Generation Failed</div><div class="figma-card-desc">생성 실패 → Retry</div></div></div>
+      <div class="figma-card" onclick="openLightbox(8)"><img src="figma/09_taking_longer.png" alt=""><div class="figma-card-body"><div class="figma-card-title">09. Taking Longer</div><div class="figma-card-desc">타임아웃 → Retry</div></div></div>
+      <div class="figma-card" onclick="openLightbox(9)"><img src="figma/10_cancel_generation.png" alt=""><div class="figma-card-body"><div class="figma-card-title">10. Cancel Generation</div><div class="figma-card-desc">사용자 취소 → 횟수 차감</div></div></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">✨ 생성 결과 탐색</div>
+    <div class="figma-grid">
+      <div class="figma-card" onclick="openLightbox(10)"><img src="figma/11_result_1of1.png" alt=""><div class="figma-card-body"><div class="figma-card-title">11. Result 1/1</div><div class="figma-card-desc">첫 번째 결과</div></div></div>
+      <div class="figma-card" onclick="openLightbox(11)"><img src="figma/12_result_1of2_tooltip.png" alt=""><div class="figma-card-body"><div class="figma-card-title">12. Result 1/2 + Tooltip</div><div class="figma-card-desc">두 번째 결과 + 이전 결과 안내 툴팁</div></div></div>
+      <div class="figma-card" onclick="openLightbox(12)"><img src="figma/13_result_3of4.png" alt=""><div class="figma-card-body"><div class="figma-card-title">13. Result 3/4</div><div class="figma-card-desc">다수 결과 탐색</div></div></div>
+      <div class="figma-card" onclick="openLightbox(13)"><img src="figma/14_result_3of5_0left.png" alt=""><div class="figma-card-body"><div class="figma-card-title">14. Result 3/5 (0 left)</div><div class="figma-card-desc">횟수 소진 상태</div></div></div>
+      <div class="figma-card" onclick="openLightbox(14)"><img src="figma/15_result_3of5_0left_final.png" alt=""><div class="figma-card-body"><div class="figma-card-title">15. Result Final (0 left)</div><div class="figma-card-desc">최종 선택 화면</div></div></div>
+    </div>
+  </div>
+
+</div>
+
 </div><!-- /content -->
+
+<div class="lightbox" id="lightbox">
+  <button class="lightbox-close" onclick="closeLightbox()" title="닫기">✕</button>
+  <button class="lightbox-nav lightbox-prev" onclick="navLightbox(-1)" title="이전">‹</button>
+  <button class="lightbox-nav lightbox-next" onclick="navLightbox(1)" title="다음">›</button>
+  <img id="lightbox-img" src="" alt="">
+  <div class="lightbox-title" id="lightbox-title"></div>
+</div>
 
 <script>
 function switchTab(id) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-  event.target.classList.add('active');
+  var tabs = document.querySelectorAll('.tab');
+  tabs.forEach(function(t) {
+    if (t.getAttribute('onclick') && t.getAttribute('onclick').indexOf("'" + id + "'") !== -1) t.classList.add('active');
+  });
   document.getElementById('panel-' + id).classList.add('active');
 }
+
+var lbImages = [
+  { src:'figma/01_select_template.png', title:'01. Select Template' },
+  { src:'figma/02_choose_method_default.png', title:'02. Choose Method (Default)' },
+  { src:'figma/03_choose_method_ai_selected.png', title:'03. Choose Method (AI Selected)' },
+  { src:'figma/04_ai_generate_empty_prompt.png', title:'04. Empty Prompt' },
+  { src:'figma/05_ai_generate_prompt_filled.png', title:'05. Prompt Filled' },
+  { src:'figma/06_ai_generate_ip_prompt.png', title:'06. IP Prompt' },
+  { src:'figma/07_ai_generating_loading.png', title:'07. Generating (Loading)' },
+  { src:'figma/08_generation_failed.png', title:'08. Generation Failed' },
+  { src:'figma/09_taking_longer.png', title:'09. Taking Longer' },
+  { src:'figma/10_cancel_generation.png', title:'10. Cancel Generation' },
+  { src:'figma/11_result_1of1.png', title:'11. Result 1/1' },
+  { src:'figma/12_result_1of2_tooltip.png', title:'12. Result 1/2 + Tooltip' },
+  { src:'figma/13_result_3of4.png', title:'13. Result 3/4' },
+  { src:'figma/14_result_3of5_0left.png', title:'14. Result 3/5 (0 left)' },
+  { src:'figma/15_result_3of5_0left_final.png', title:'15. Result Final (0 left)' }
+];
+var lbIdx = 0;
+function openLightbox(i) {
+  lbIdx = i;
+  document.getElementById('lightbox-img').src = lbImages[i].src;
+  document.getElementById('lightbox-title').textContent = lbImages[i].title;
+  document.getElementById('lightbox').classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('active');
+  document.body.style.overflow = '';
+}
+function navLightbox(dir) {
+  lbIdx = (lbIdx + dir + lbImages.length) % lbImages.length;
+  document.getElementById('lightbox-img').src = lbImages[lbIdx].src;
+  document.getElementById('lightbox-title').textContent = lbImages[lbIdx].title;
+}
+document.getElementById('lightbox').addEventListener('click', function(e) {
+  if (e.target === this) closeLightbox();
+});
+document.addEventListener('keydown', function(e) {
+  if (!document.getElementById('lightbox').classList.contains('active')) return;
+  if (e.key === 'Escape') closeLightbox();
+  if (e.key === 'ArrowLeft') navLightbox(-1);
+  if (e.key === 'ArrowRight') navLightbox(1);
+});
 </script>
 </body>
 </html>

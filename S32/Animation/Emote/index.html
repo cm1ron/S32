@@ -147,6 +147,25 @@
 
   .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
   @media (max-width: 700px) { .two-col { grid-template-columns: 1fr; } }
+
+  .figma-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+  .figma-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; cursor: pointer; transition: border-color 0.15s; }
+  .figma-card:hover { border-color: var(--accent); }
+  .figma-card img { width: 100%; height: 180px; object-fit: cover; border-bottom: 1px solid var(--border); }
+  .figma-card-body { padding: 10px 14px; }
+  .figma-card-title { font-weight: 700; color: #fff; font-size: 12px; margin-bottom: 2px; }
+  .figma-card-desc { font-size: 11px; color: var(--muted); }
+
+  .lightbox { display:none; position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,0.85); backdrop-filter:blur(6px); align-items:center; justify-content:center; }
+  .lightbox.active { display:flex; }
+  .lightbox-close { position:fixed; top:16px; right:16px; z-index:10000; width:40px; height:40px; border-radius:50%; border:1px solid rgba(255,255,255,0.2); background:rgba(30,30,40,0.8); color:#fff; font-size:20px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.15s; }
+  .lightbox-close:hover { background:var(--red); border-color:var(--red); transform:scale(1.1); }
+  .lightbox-title { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); color:#fff; font-size:14px; font-weight:600; background:rgba(30,30,40,0.8); padding:6px 16px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); z-index:10000; white-space:nowrap; }
+  .lightbox img { max-width:92vw; max-height:88vh; object-fit:contain; border-radius:8px; box-shadow:0 8px 40px rgba(0,0,0,0.5); }
+  .lightbox-nav { position:fixed; top:50%; transform:translateY(-50%); z-index:10000; width:44px; height:44px; border-radius:50%; border:1px solid rgba(255,255,255,0.2); background:rgba(30,30,40,0.8); color:#fff; font-size:22px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.15s; }
+  .lightbox-nav:hover { background:var(--accent); border-color:var(--accent); }
+  .lightbox-prev { left:16px; }
+  .lightbox-next { right:16px; }
 </style>
 </head>
 <body>
@@ -164,12 +183,14 @@
 </div>
 
 <div class="tabs">
-  <div class="tab active" onclick="switchTab('prepare')">📋 준비 사항</div>
-  <div class="tab" onclick="switchTab('checklist')">✅ QA 체크리스트</div>
-  <div class="tab" onclick="switchTab('scenarios')">🎬 테스트 시나리오</div>
-  <div class="tab" onclick="switchTab('assets')">📦 에셋 목록</div>
-  <div class="tab" onclick="switchTab('bugs')">🐛 버그 / 미확인</div>
-  <div class="tab" onclick="switchTab('smoke')">🔥 Smoke Test</div>
+  <div class="tab active" onclick="switchTab('prepare')">Overview</div>
+  <div class="tab" onclick="switchTab('smoke')">Smoke Test</div>
+  <div class="tab" onclick="switchTab('checklist')">QA Checklist</div>
+  <div class="tab" onclick="switchTab('scenarios')">Test Scenarios</div>
+  <div class="tab" onclick="switchTab('uxspec')">UX Spec</div>
+  <div class="tab" onclick="switchTab('assets')">Assets</div>
+  <div class="tab" onclick="switchTab('bugs')">Bugs</div>
+  <div class="tab" onclick="switchTab('figma')">Figma</div>
 </div>
 
 <div class="content">
@@ -369,9 +390,10 @@ adb logcat | grep -E "OVDR_grpc.*ERROR|Valid target emote does not exist|status.
     <div class="card" style="margin-bottom:14px">
       <h3 style="color:#fff;margin-bottom:10px;font-size:14px">🎮 크리에이터 Animations 제어 정책</h3>
       <ul style="list-style:none;padding:0;color:var(--muted);font-size:13px;line-height:2">
+        <li>• <strong style="color:var(--red)">네이티브 월드</strong> (Origin Island 등 언리얼 자체 월드) → 유저 커스텀 Animations <strong style="color:var(--red)">절대 미적용</strong> (기본 애니메이션만 재생) <span class="badge badge-ok" style="font-size:10px;vertical-align:middle;margin-left:4px">확인됨 2026-03-24</span></li>
         <li>• 크리에이터가 월드 내 <strong style="color:var(--text)">강제 Animations</strong> 지정 슬롯 → 유저 Customize보다 우선</li>
         <li>• 크리에이터가 <strong style="color:var(--red)">휴머노이드 디스크립션</strong> 적용 → 유저 커스텀 <strong style="color:var(--red)">전체 무시</strong> (일부 슬롯만 수정해도 전부 강제)</li>
-        <li>• 위 조건 모두 해당 없으면 → 유저 Customize Animations 우선 적용</li>
+        <li>• 위 조건 모두 해당 없으면 (디스크립션 미적용 UGC 월드) → 유저 Customize Animations <strong style="color:var(--green)">우선 적용</strong></li>
         <li>• Emote 제어: 현재 크리에이터 제어 불가 (향후 대응)</li>
       </ul>
     </div>
@@ -1445,14 +1467,455 @@ adb logcat | grep -E "OVDR_grpc.*ERROR|Valid target emote does not exist|status.
   </div>
 </div>
 
+<!-- ====== TAB: UX SPEC ====== -->
+<div class="tab-panel" id="tab-uxspec">
+
+  <div class="alert alert-purple" style="margin-bottom:20px">
+    <span>💡</span>
+    <div class="alert-text">각 스펙 항목에 <strong>해당 피그마 화면</strong>을 같이 표시했습니다. 이미지를 클릭하면 라이트박스로 확대됩니다.</div>
+  </div>
+
+  <!-- ① 마켓플레이스 랜딩 & 탐색 -->
+  <div class="section">
+    <div class="section-title">🛍️ ① 마켓플레이스 랜딩 & 탐색</div>
+    <div style="display:grid;grid-template-columns:240px 1fr;gap:16px;align-items:start">
+      <div>
+        <div style="cursor:pointer;border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:10px" onclick="openLightbox(0)">
+          <img src="figma/01_landing.png" style="width:100%;display:block" alt="피그마 01">
+          <div style="padding:6px 10px;background:var(--surface2);font-size:11px;color:var(--accent);font-weight:600;text-align:center">01. 랜딩 (클릭 확대)</div>
+        </div>
+        <div style="cursor:pointer;border:1px solid var(--border);border-radius:10px;overflow:hidden" onclick="openLightbox(1)">
+          <img src="figma/02_griditem_arrow_click.png" style="width:100%;display:block" alt="피그마 02">
+          <div style="padding:6px 10px;background:var(--surface2);font-size:11px;color:var(--accent);font-weight:600;text-align:center">02. 그리드 아이템 화살표 (클릭 확대)</div>
+        </div>
+      </div>
+      <div class="card" style="margin:0">
+        <h3 style="color:#fff;margin-bottom:10px;font-size:14px">랜딩 화면 구성</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>영역</th><th>규칙</th><th>확인 포인트</th></tr></thead>
+            <tbody>
+              <tr><td>그리드 탭</td><td><strong style="color:var(--accent)">Bundle / Emotes</strong> 서브탭</td><td>MP 탭에서 Bundle·Emotes 두 탭 노출 확인</td></tr>
+              <tr><td>번들 카드</td><td>썸네일 + 이름 + 가격(Bluc) 노출</td><td>3종 번들 카드 정보 정확성</td></tr>
+              <tr><td>화살표 버튼</td><td>카드 좌우 화살표 클릭 → 다음/이전 번들 이동</td><td>화살표 인디케이터와 Info FAB 노출 위치</td></tr>
+              <tr><td>이모트 카드</td><td>개별 이모트 카드 (이름 + 가격)</td><td>Meditation / Rejection / Salute 확인</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div style="margin-top:10px;padding:8px 12px;background:rgba(46,196,182,0.08);border:1px solid rgba(46,196,182,0.2);border-radius:6px;font-size:12px;color:var(--accent)">
+          📍 화면 위치: Marketplace > <strong>Animations 탭</strong> > Bundle / Emotes 서브탭 그리드
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ② 아이템 상세 & Info 바텀시트 -->
+  <div class="section">
+    <div class="section-title">ℹ️ ② 아이템 상세 — Info CTA 바텀시트</div>
+    <div style="display:grid;grid-template-columns:240px 1fr;gap:16px;align-items:start">
+      <div>
+        <div style="cursor:pointer;border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:10px" onclick="openLightbox(2)">
+          <img src="figma/03_arrow_indicator_info_fab.png" style="width:100%;display:block" alt="피그마 03">
+          <div style="padding:6px 10px;background:var(--surface2);font-size:11px;color:var(--accent);font-weight:600;text-align:center">03. Info FAB (클릭 확대)</div>
+        </div>
+        <div style="cursor:pointer;border:1px solid var(--border);border-radius:10px;overflow:hidden" onclick="openLightbox(3)">
+          <img src="figma/04_info_cta_bottomsheet.png" style="width:100%;display:block" alt="피그마 04">
+          <div style="padding:6px 10px;background:var(--surface2);font-size:11px;color:var(--accent);font-weight:600;text-align:center">04. Info CTA 바텀시트 (클릭 확대)</div>
+        </div>
+      </div>
+      <div class="card" style="margin:0">
+        <h3 style="color:#fff;margin-bottom:10px;font-size:14px">Info 바텀시트 규칙</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>요소</th><th>규칙</th><th>확인 포인트</th></tr></thead>
+            <tbody>
+              <tr><td>Info FAB</td><td>그리드 카드 우하단 "i" 아이콘 노출</td><td>아이콘 위치·터치 영역</td></tr>
+              <tr><td>바텀시트 타이틀</td><td>번들 이름 + 가격 표시</td><td>Spec vs Dev 이름 불일치 체크</td></tr>
+              <tr><td>구성 아이템</td><td>번들 내 6개 슬롯 (Idle·Walk·Run·Jump·Fall·Sprint) 리스트</td><td>슬롯별 이름·타입 정확성</td></tr>
+              <tr><td>CTA 버튼</td><td>Buy / Try 등 액션 버튼</td><td>미구매·구매완료 상태별 CTA 변화</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div style="margin-top:10px;padding:8px 12px;background:rgba(46,196,182,0.08);border:1px solid rgba(46,196,182,0.2);border-radius:6px;font-size:12px;color:var(--accent)">
+          📍 화면 위치: Marketplace > 번들 카드의 <strong>Info FAB 클릭</strong> → <strong>Info 바텀시트</strong>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ③ 구매 플로우 — Save / Buy 바텀시트 -->
+  <div class="section">
+    <div class="section-title">🛒 ③ 구매 플로우 — Save / Buy 바텀시트</div>
+    <div style="display:grid;grid-template-columns:240px 1fr;gap:16px;align-items:start">
+      <div>
+        <div style="cursor:pointer;border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:10px" onclick="openLightbox(5)">
+          <img src="figma/06_save_buy_bottomsheet.png" style="width:100%;display:block" alt="피그마 06">
+          <div style="padding:6px 10px;background:var(--surface2);font-size:11px;color:var(--accent);font-weight:600;text-align:center">06. Save/Buy 바텀시트 (클릭 확대)</div>
+        </div>
+        <div style="cursor:pointer;border:1px solid var(--border);border-radius:10px;overflow:hidden" onclick="openLightbox(6)">
+          <img src="figma/07_buy_share_new_look.png" style="width:100%;display:block" alt="피그마 07">
+          <div style="padding:6px 10px;background:var(--surface2);font-size:11px;color:var(--accent);font-weight:600;text-align:center">07. Buy → Share → New Look (클릭 확대)</div>
+        </div>
+      </div>
+      <div class="card" style="margin:0">
+        <h3 style="color:#fff;margin-bottom:10px;font-size:14px">구매 바텀시트 동작</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>단계</th><th>동작</th><th>확인 포인트</th></tr></thead>
+            <tbody>
+              <tr><td>Save 클릭</td><td>구매할 아이템 목록 + 총액 표시</td><td>미보유 아이템만 표시, 가격 합산 정확성</td></tr>
+              <tr><td>Buy 클릭</td><td>결제 진행 → 성공 시 Share 화면</td><td>Bluc 잔액 차감, 구매 완료 토스트</td></tr>
+              <tr><td>Share / New Look</td><td>구매 후 공유 or 새 룩 적용 옵션</td><td>Share → SNS 공유 / New Look → 즉시 장착</td></tr>
+              <tr><td>장바구니 제거</td><td>X 아이콘으로 개별 아이템 제거</td><td>가격 재계산 및 UI 갱신</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div style="margin-top:10px;padding:8px 12px;background:rgba(46,196,182,0.08);border:1px solid rgba(46,196,182,0.2);border-radius:6px;font-size:12px;color:var(--accent)">
+          📍 화면 위치: Marketplace에서 번들 선택 → <strong>Save 버튼</strong> → <strong>Buy 바텀시트</strong>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ④ Customize 뷰 — 장착 화면 -->
+  <div class="section">
+    <div class="section-title">🎨 ④ Customize 뷰 — 장착 화면</div>
+    <div style="display:grid;grid-template-columns:240px 1fr;gap:16px;align-items:start">
+      <div>
+        <div style="cursor:pointer;border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:10px" onclick="openLightbox(7)">
+          <img src="figma/08_marketplace_customize_view.png" style="width:100%;display:block" alt="피그마 08">
+          <div style="padding:6px 10px;background:var(--surface2);font-size:11px;color:var(--accent);font-weight:600;text-align:center">08. MP ↔ Customize 뷰 (클릭 확대)</div>
+        </div>
+        <div style="cursor:pointer;border:1px solid var(--border);border-radius:10px;overflow:hidden" onclick="openLightbox(12)">
+          <img src="figma/13_customize_landing_no_purchase.png" style="width:100%;display:block" alt="피그마 13">
+          <div style="padding:6px 10px;background:var(--surface2);font-size:11px;color:var(--accent);font-weight:600;text-align:center">13. Customize 미구매 상태 (클릭 확대)</div>
+        </div>
+      </div>
+      <div class="card" style="margin:0">
+        <h3 style="color:#fff;margin-bottom:10px;font-size:14px">Customize 장착 규칙</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>조건</th><th>화면 상태</th><th>확인 포인트</th></tr></thead>
+            <tbody>
+              <tr><td>보유 번들 있음</td><td>서브탭: <strong style="color:var(--accent)">Bundle / Idle / Walk / Run / Jump / Fall / Sprint</strong></td><td>MyItem 탭 서브카테고리 노출 확인</td></tr>
+              <tr><td>미구매 상태</td><td>빈 슬롯 + "Go Shopping" CTA</td><td>Customize 진입 시 빈 상태 처리</td></tr>
+              <tr><td>장착 적용</td><td>장착 시 아바타 프리뷰에 즉시 반영</td><td>번들/개별 슬롯 장착 후 프리뷰 정확성</td></tr>
+              <tr><td>네이티브 월드</td><td><strong style="color:var(--red)">커스텀 애니메이션 미적용</strong> (기본 애니메이션만)</td><td>네이티브 월드에서 커스텀 비활성 정책 확인</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div style="margin-top:10px;padding:8px 12px;background:rgba(46,196,182,0.08);border:1px solid rgba(46,196,182,0.2);border-radius:6px;font-size:12px;color:var(--accent)">
+          📍 화면 위치: 프로필 > <strong>Customize > Animations 탭</strong> > Bundle / 개별 슬롯 서브탭
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ⑤ 번들 장착 & 교체 로직 -->
+  <div class="section">
+    <div class="section-title">🔄 ⑤ 번들 장착 & 교체 로직</div>
+    <div style="display:grid;grid-template-columns:240px 1fr;gap:16px;align-items:start">
+      <div>
+        <div style="cursor:pointer;border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:10px" onclick="openLightbox(13)">
+          <img src="figma/14_bundle_purchase_fullset.png" style="width:100%;display:block" alt="피그마 14">
+          <div style="padding:6px 10px;background:var(--surface2);font-size:11px;color:var(--accent);font-weight:600;text-align:center">14. 번들 풀세트 장착 (클릭 확대)</div>
+        </div>
+        <div style="cursor:pointer;border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:10px" onclick="openLightbox(14)">
+          <img src="figma/15_item_individual_slot.png" style="width:100%;display:block" alt="피그마 15">
+          <div style="padding:6px 10px;background:var(--surface2);font-size:11px;color:var(--accent);font-weight:600;text-align:center">15. 개별 슬롯 장착 (클릭 확대)</div>
+        </div>
+        <div style="cursor:pointer;border:1px solid var(--border);border-radius:10px;overflow:hidden" onclick="openLightbox(20)">
+          <img src="figma/21_bundle_replace_a_to_b.png" style="width:100%;display:block" alt="피그마 21">
+          <div style="padding:6px 10px;background:var(--surface2);font-size:11px;color:var(--accent);font-weight:600;text-align:center">21. 번들 A→B 교체 (클릭 확대)</div>
+        </div>
+      </div>
+      <div>
+        <div class="card" style="margin:0 0 12px 0">
+          <h3 style="color:#fff;margin-bottom:10px;font-size:14px">번들 장착 규칙</h3>
+          <div class="tbl-wrap">
+            <table>
+              <thead><tr><th>동작</th><th>결과</th><th>확인 포인트</th></tr></thead>
+              <tbody>
+                <tr><td>번들 풀세트 장착</td><td>6슬롯 (Idle~Sprint) 일괄 교체</td><td>모든 슬롯이 해당 번들로 변경됨</td></tr>
+                <tr><td>개별 슬롯 장착</td><td>선택한 슬롯만 교체, 나머지 유지</td><td>혼합 장착 상태 유지 확인</td></tr>
+                <tr><td>활성 아이템 재클릭 (비기본)</td><td>해제 → Default 복귀</td><td>해제 후 기본 애니메이션 적용 확인</td></tr>
+                <tr><td>활성 Default 재클릭</td><td>해제 불가 (항상 활성)</td><td>Default는 비활성화 불가</td></tr>
+                <tr><td>A번들 → B번들 교체</td><td>전체 슬롯이 B번들로 교체</td><td>이전 A번들 장착 해제 확인</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card" style="margin:0">
+          <h3 style="color:#fff;margin-bottom:8px;font-size:14px">개별 → 번들 전환 시</h3>
+          <p style="color:var(--muted);font-size:13px">개별 슬롯으로 혼합 장착 후 번들을 선택하면 → <strong style="color:var(--accent)">전체 슬롯이 번들로 덮어씌워짐</strong></p>
+          <div style="margin-top:10px;padding:8px 12px;background:rgba(46,196,182,0.08);border:1px solid rgba(46,196,182,0.2);border-radius:6px;font-size:12px;color:var(--accent)">
+            📍 화면 위치: Customize > Animations > <strong>Bundle 탭</strong>에서 번들 클릭 or <strong>개별 슬롯 탭</strong>에서 아이템 클릭
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ⑥ 리셋 / 클리어 / 언두 -->
+  <div class="section">
+    <div class="section-title">↩️ ⑥ 리셋 / 클리어 / 언두</div>
+    <div style="display:grid;grid-template-columns:240px 1fr;gap:16px;align-items:start">
+      <div style="cursor:pointer;border:1px solid var(--border);border-radius:10px;overflow:hidden" onclick="openLightbox(17)">
+        <img src="figma/18_reset_clear_undo.png" style="width:100%;display:block" alt="피그마 18">
+        <div style="padding:6px 10px;background:var(--surface2);font-size:11px;color:var(--accent);font-weight:600;text-align:center">18. Reset / Clear / Undo (클릭 확대)</div>
+      </div>
+      <div class="card" style="margin:0">
+        <h3 style="color:#fff;margin-bottom:10px;font-size:14px">초기화 동작 규칙</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>버튼</th><th>동작</th><th>확인 포인트</th></tr></thead>
+            <tbody>
+              <tr><td><strong style="color:var(--accent)">Reset</strong></td><td>저장된 상태로 되돌리기 (마지막 Save 시점)</td><td>커스텀 변경 후 Reset → 이전 Save 상태 복귀</td></tr>
+              <tr><td><strong style="color:var(--accent)">Clear</strong></td><td>모든 슬롯을 Default로 초기화</td><td>전체 슬롯이 기본 애니메이션으로 변경</td></tr>
+              <tr><td><strong style="color:var(--accent)">Undo</strong></td><td>직전 동작 1단계 되돌리기</td><td>한 단계씩 원복 확인</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div style="margin-top:10px;padding:8px 12px;background:rgba(46,196,182,0.08);border:1px solid rgba(46,196,182,0.2);border-radius:6px;font-size:12px;color:var(--accent)">
+          📍 화면 위치: Customize > Animations > 하단 <strong>Reset · Clear · Undo 버튼 영역</strong>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ⑦ 이모트 관리 -->
+  <div class="section">
+    <div class="section-title">🎭 ⑦ 이모트 관리</div>
+    <div style="display:grid;grid-template-columns:240px 1fr;gap:16px;align-items:start">
+      <div>
+        <div style="cursor:pointer;border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:10px" onclick="openLightbox(8)">
+          <img src="figma/09_emote_tab.png" style="width:100%;display:block" alt="피그마 09">
+          <div style="padding:6px 10px;background:var(--surface2);font-size:11px;color:var(--accent);font-weight:600;text-align:center">09. 이모트 탭 (클릭 확대)</div>
+        </div>
+        <div style="cursor:pointer;border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:10px" onclick="openLightbox(18)">
+          <img src="figma/19_emote_empty_go_shopping.png" style="width:100%;display:block" alt="피그마 19">
+          <div style="padding:6px 10px;background:var(--surface2);font-size:11px;color:var(--accent);font-weight:600;text-align:center">19. 빈 이모트 → Go Shopping (클릭 확대)</div>
+        </div>
+        <div style="cursor:pointer;border:1px solid var(--border);border-radius:10px;overflow:hidden" onclick="openLightbox(11)">
+          <img src="figma/12_hud_emotes_ingame.png" style="width:100%;display:block" alt="피그마 12">
+          <div style="padding:6px 10px;background:var(--surface2);font-size:11px;color:var(--accent);font-weight:600;text-align:center">12. 인게임 HUD 이모트 (클릭 확대)</div>
+        </div>
+      </div>
+      <div>
+        <div class="card" style="margin:0 0 12px 0">
+          <h3 style="color:#fff;margin-bottom:10px;font-size:14px">이모트 Customize 탭</h3>
+          <div class="tbl-wrap">
+            <table>
+              <thead><tr><th>상태</th><th>화면</th><th>확인 포인트</th></tr></thead>
+              <tbody>
+                <tr><td>보유 이모트 있음</td><td>이모트 그리드 + 장착/해제 토글</td><td>장착 시 슬롯 배치, 순서 확인</td></tr>
+                <tr><td>이모트 미보유</td><td>빈 화면 + <strong style="color:var(--accent)">Go Shopping</strong> CTA</td><td>CTA 클릭 → MP 이모트 탭 이동</td></tr>
+                <tr><td>이모트 제거</td><td>프로필 → 이모트 슬롯 해제</td><td>해제 후 슬롯이 비어있는지 확인</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card" style="margin:0">
+          <h3 style="color:#fff;margin-bottom:8px;font-size:14px">인게임 HUD 이모트</h3>
+          <p style="color:var(--muted);font-size:13px">월드 입장 후 HUD에서 장착된 이모트 실행 가능 (<strong style="color:var(--accent)">UGC 월드만 커스텀 적용</strong>)</p>
+          <div style="margin-top:10px;padding:8px 12px;background:rgba(46,196,182,0.08);border:1px solid rgba(46,196,182,0.2);border-radius:6px;font-size:12px;color:var(--accent)">
+            📍 화면 위치: Customize > <strong>Emote 탭</strong> / 인게임 <strong>HUD 이모트 버튼</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ⑧ 구매 내역 확인 -->
+  <div class="section">
+    <div class="section-title">📋 ⑧ 구매 내역 — Item Purchases</div>
+    <div style="display:grid;grid-template-columns:240px 1fr;gap:16px;align-items:start">
+      <div style="cursor:pointer;border:1px solid var(--border);border-radius:10px;overflow:hidden" onclick="openLightbox(10)">
+        <img src="figma/11_item_purchases.png" style="width:100%;display:block" alt="피그마 11">
+        <div style="padding:6px 10px;background:var(--surface2);font-size:11px;color:var(--accent);font-weight:600;text-align:center">11. 구매 내역 (클릭 확대)</div>
+      </div>
+      <div class="card" style="margin:0">
+        <h3 style="color:#fff;margin-bottom:10px;font-size:14px">구매 내역 확인 포인트</h3>
+        <ul style="list-style:disc;padding-left:20px;color:var(--muted);font-size:13px;line-height:2">
+          <li>Item Purchases 목록: 번들명 + 날짜 + 총액</li>
+          <li>Order Details: 개별 슬롯 리스트 (이름 + 가격)</li>
+          <li>이모트 단품 구매 내역 별도 노출</li>
+          <li>Total Price 합산 정확성 (Bluc 기준)</li>
+        </ul>
+        <div style="margin-top:10px;padding:8px 12px;background:rgba(46,196,182,0.08);border:1px solid rgba(46,196,182,0.2);border-radius:6px;font-size:12px;color:var(--accent)">
+          📍 화면 위치: 프로필 > <strong>Item Purchases</strong> > 해당 주문 클릭 > <strong>Order Details</strong>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ⑨ 탭 스위치 & 뷰 전환 -->
+  <div class="section">
+    <div class="section-title">🔀 ⑨ 탭 스위치 & 뷰 전환 시나리오</div>
+    <div style="display:grid;grid-template-columns:240px 1fr;gap:16px;align-items:start">
+      <div>
+        <div style="cursor:pointer;border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:10px" onclick="openLightbox(23)">
+          <img src="figma/24_mp_bundle_tab_switch.png" style="width:100%;display:block" alt="피그마 24">
+          <div style="padding:6px 10px;background:var(--surface2);font-size:11px;color:var(--accent);font-weight:600;text-align:center">24. MP 번들 탭 스위치 (클릭 확대)</div>
+        </div>
+        <div style="cursor:pointer;border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:10px" onclick="openLightbox(27)">
+          <img src="figma/28_cust_anim_emote_switch.png" style="width:100%;display:block" alt="피그마 28">
+          <div style="padding:6px 10px;background:var(--surface2);font-size:11px;color:var(--accent);font-weight:600;text-align:center">28. Customize 애니메이션↔이모트 (클릭 확대)</div>
+        </div>
+        <div style="cursor:pointer;border:1px solid var(--border);border-radius:10px;overflow:hidden" onclick="openLightbox(31)">
+          <img src="figma/32_mp_anim_to_customize.png" style="width:100%;display:block" alt="피그마 32">
+          <div style="padding:6px 10px;background:var(--surface2);font-size:11px;color:var(--accent);font-weight:600;text-align:center">32. MP → Customize 전환 (클릭 확대)</div>
+        </div>
+      </div>
+      <div class="card" style="margin:0">
+        <h3 style="color:#fff;margin-bottom:10px;font-size:14px">탭 전환 & 네비게이션 규칙</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>시나리오</th><th>기대 동작</th><th>확인 포인트</th></tr></thead>
+            <tbody>
+              <tr><td>MP Bundle → Emotes</td><td>서브탭 전환, 그리드 갱신</td><td>이전 탭 선택 상태 유지 여부</td></tr>
+              <tr><td>MP Emotes → Bundle</td><td>번들 그리드 복귀</td><td>스크롤 위치 초기화 확인</td></tr>
+              <tr><td>Customize Anim ↔ Emote</td><td>메인 탭 전환</td><td>장착 상태 보존 확인</td></tr>
+              <tr><td>MP → Customize</td><td>뷰 전환 + 장착 상태 동기화</td><td>MP에서 구매 후 Customize 반영</td></tr>
+              <tr><td>Customize → MP</td><td>뷰 전환 + 보유 상태 반영</td><td>"Owned" 뱃지 정확성</td></tr>
+              <tr><td>Primary 카테고리 이동</td><td>Animations 외 다른 카테고리 선택</td><td>돌아왔을 때 이전 서브탭 유지</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div style="margin-top:10px;padding:8px 12px;background:rgba(46,196,182,0.08);border:1px solid rgba(46,196,182,0.2);border-radius:6px;font-size:12px;color:var(--accent)">
+          📍 화면 위치: <strong>Marketplace ↔ Customize</strong> 전환 / 각 <strong>서브탭 전환</strong> 시
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ⑩ 네이티브 월드 정책 -->
+  <div class="section">
+    <div class="section-title">🌐 ⑩ 네이티브 vs UGC 월드 — 애니메이션 적용 정책</div>
+    <div class="card">
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>월드 타입</th><th>커스텀 애니메이션</th><th>커스텀 이모트</th><th>비고</th></tr></thead>
+          <tbody>
+            <tr><td><strong style="color:var(--red)">네이티브 월드</strong></td><td>❌ 미적용 (기본 애니메이션만)</td><td>❌ 미적용</td><td>언리얼 기반, HumanoidDescription 미사용</td></tr>
+            <tr><td><strong style="color:var(--green)">UGC 월드 (기본)</strong></td><td>✅ 커스텀 적용</td><td>✅ 커스텀 적용</td><td>유저 Customize 설정 우선</td></tr>
+            <tr><td><strong style="color:var(--yellow)">UGC 월드 (크리에이터 Override)</strong></td><td>⚠️ 크리에이터 설정 우선</td><td>⚠️ 크리에이터 설정 우선</td><td>jump만 변경해도 나머지 슬롯 전부 기본으로 적용</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div style="margin-top:10px;padding:8px 12px;background:rgba(246,107,107,0.08);border:1px solid rgba(246,107,107,0.2);border-radius:6px;font-size:12px;color:var(--red)">
+        ⚠️ 크리에이터가 HumanoidDescription을 적용하면 유저 커스텀 <strong>전체 무시</strong> — 일부 슬롯만 변경해도 나머지는 기본 애니메이션
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ====== TAB: FIGMA ====== -->
+<div class="tab-panel" id="tab-figma">
+
+  <div class="alert alert-purple" style="margin-bottom:20px">
+    <span>💡</span>
+    <div class="alert-text">피그마 이미지를 클릭하면 라이트박스로 확대됩니다. ← → 키 또는 좌우 버튼으로 탐색, <strong>ESC / X 버튼</strong>으로 닫기.</div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">🛒 마켓플레이스 — 발견 & 구매</div>
+    <div class="figma-grid">
+      <div class="figma-card" onclick="openLightbox(0)"><img src="figma/01_landing.png" alt=""><div class="figma-card-body"><div class="figma-card-title">01. Landing</div><div class="figma-card-desc">MP Animations/Emotes 탭 진입</div></div></div>
+      <div class="figma-card" onclick="openLightbox(1)"><img src="figma/02_griditem_arrow_click.png" alt=""><div class="figma-card-body"><div class="figma-card-title">02. GridItem Arrow Click</div><div class="figma-card-desc">번들 선택 → 화살표 탭 전환</div></div></div>
+      <div class="figma-card" onclick="openLightbox(2)"><img src="figma/03_arrow_indicator_info_fab.png" alt=""><div class="figma-card-body"><div class="figma-card-title">03. Arrow Indicator & Info FAB</div><div class="figma-card-desc">미리보기 화살표 + ⓘ 버튼</div></div></div>
+      <div class="figma-card" onclick="openLightbox(3)"><img src="figma/04_info_cta_bottomsheet.png" alt=""><div class="figma-card-body"><div class="figma-card-title">04. Info CTA Bottomsheet</div><div class="figma-card-desc">번들 상세 바텀시트</div></div></div>
+      <div class="figma-card" onclick="openLightbox(4)"><img src="figma/05_other_tab_click.png" alt=""><div class="figma-card-body"><div class="figma-card-title">05. Other Tab Click</div><div class="figma-card-desc">다른 탭 전환 동작</div></div></div>
+      <div class="figma-card" onclick="openLightbox(5)"><img src="figma/06_save_buy_bottomsheet.png" alt=""><div class="figma-card-body"><div class="figma-card-title">06. Save/Buy Bottomsheet</div><div class="figma-card-desc">저장/구매 바텀시트</div></div></div>
+      <div class="figma-card" onclick="openLightbox(6)"><img src="figma/07_buy_share_new_look.png" alt=""><div class="figma-card-body"><div class="figma-card-title">07. Buy & Share New Look</div><div class="figma-card-desc">구매 완료 + 공유 화면</div></div></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">🎛️ Customize — 장착 & 관리</div>
+    <div class="figma-grid">
+      <div class="figma-card" onclick="openLightbox(7)"><img src="figma/08_marketplace_customize_view.png" alt=""><div class="figma-card-body"><div class="figma-card-title">08. MP ↔ Customize View</div><div class="figma-card-desc">마켓 → 커마 전환 뷰</div></div></div>
+      <div class="figma-card" onclick="openLightbox(8)"><img src="figma/09_emote_tab.png" alt=""><div class="figma-card-body"><div class="figma-card-title">09. Emote Tab</div><div class="figma-card-desc">이모트 탭 그리드</div></div></div>
+      <div class="figma-card" onclick="openLightbox(9)"><img src="figma/10_profile_emote_removed.png" alt=""><div class="figma-card-body"><div class="figma-card-title">10. Profile Emote Removed</div><div class="figma-card-desc">프로필 이모트 탭 제거</div></div></div>
+      <div class="figma-card" onclick="openLightbox(10)"><img src="figma/11_item_purchases.png" alt=""><div class="figma-card-body"><div class="figma-card-title">11. Item Purchases</div><div class="figma-card-desc">구매 내역 화면</div></div></div>
+      <div class="figma-card" onclick="openLightbox(11)"><img src="figma/12_hud_emotes_ingame.png" alt=""><div class="figma-card-body"><div class="figma-card-title">12. HUD Emotes In-game</div><div class="figma-card-desc">인게임 HUD 이모트</div></div></div>
+      <div class="figma-card" onclick="openLightbox(12)"><img src="figma/13_customize_landing_no_purchase.png" alt=""><div class="figma-card-body"><div class="figma-card-title">13. Customize Landing (미구매)</div><div class="figma-card-desc">미구매 상태 커마 진입</div></div></div>
+      <div class="figma-card" onclick="openLightbox(13)"><img src="figma/14_bundle_purchase_fullset.png" alt=""><div class="figma-card-body"><div class="figma-card-title">14. Bundle Purchase Full Set</div><div class="figma-card-desc">번들 전체 구매</div></div></div>
+      <div class="figma-card" onclick="openLightbox(14)"><img src="figma/15_item_individual_slot.png" alt=""><div class="figma-card-body"><div class="figma-card-title">15. Individual Slot</div><div class="figma-card-desc">개별 슬롯 장착</div></div></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">✨ 장착 상태 — Actived, Reset, Clear</div>
+    <div class="figma-grid">
+      <div class="figma-card" onclick="openLightbox(15)"><img src="figma/16_actived_click_non_default.png" alt=""><div class="figma-card-body"><div class="figma-card-title">16. Actived (Non-default)</div><div class="figma-card-desc">커스텀 장착 상태 클릭</div></div></div>
+      <div class="figma-card" onclick="openLightbox(16)"><img src="figma/17_actived_click_default.png" alt=""><div class="figma-card-body"><div class="figma-card-title">17. Actived (Default)</div><div class="figma-card-desc">기본 장착 상태 클릭</div></div></div>
+      <div class="figma-card" onclick="openLightbox(17)"><img src="figma/18_reset_clear_undo.png" alt=""><div class="figma-card-body"><div class="figma-card-title">18. Reset / Clear / Undo</div><div class="figma-card-desc">리셋·클리어·실행취소</div></div></div>
+      <div class="figma-card" onclick="openLightbox(18)"><img src="figma/19_emote_empty_go_shopping.png" alt=""><div class="figma-card-body"><div class="figma-card-title">19. Emote Empty → Go Shopping</div><div class="figma-card-desc">이모트 미보유 → 쇼핑</div></div></div>
+      <div class="figma-card" onclick="openLightbox(19)"><img src="figma/20_emote_select_detail.png" alt=""><div class="figma-card-body"><div class="figma-card-title">20. Emote Select Detail</div><div class="figma-card-desc">이모트 선택 상세</div></div></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">🔄 Bundle 교체 & 혼합 장착</div>
+    <div class="figma-grid">
+      <div class="figma-card" onclick="openLightbox(20)"><img src="figma/21_bundle_replace_a_to_b.png" alt=""><div class="figma-card-body"><div class="figma-card-title">21. Bundle A → B 교체</div><div class="figma-card-desc">번들 전체 교체</div></div></div>
+      <div class="figma-card" onclick="openLightbox(21)"><img src="figma/22_bundle_replace_a_to_b_dup.png" alt=""><div class="figma-card-body"><div class="figma-card-title">22. Bundle A → B (중복 슬롯)</div><div class="figma-card-desc">중복 슬롯 교체 케이스</div></div></div>
+      <div class="figma-card" onclick="openLightbox(22)"><img src="figma/23_individual_equip_all_to_bundle.png" alt=""><div class="figma-card-body"><div class="figma-card-title">23. 개별 → 번들 전환</div><div class="figma-card-desc">개별 전체 장착 시 번들 인식</div></div></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">🔀 탭 전환 & 카테고리 이동</div>
+    <div class="figma-grid">
+      <div class="figma-card" onclick="openLightbox(23)"><img src="figma/24_mp_bundle_tab_switch.png" alt=""><div class="figma-card-body"><div class="figma-card-title">24. MP Bundle Tab Switch</div><div class="figma-card-desc">마켓 번들 탭 전환</div></div></div>
+      <div class="figma-card" onclick="openLightbox(24)"><img src="figma/25_emotes_tab_switch.png" alt=""><div class="figma-card-body"><div class="figma-card-title">25. Emotes Tab Switch</div><div class="figma-card-desc">이모트 탭 전환</div></div></div>
+      <div class="figma-card" onclick="openLightbox(25)"><img src="figma/26_bundle_tab_buy_bottomsheet.png" alt=""><div class="figma-card-body"><div class="figma-card-title">26. Bundle Tab Buy Bottomsheet</div><div class="figma-card-desc">번들 탭 구매 바텀시트</div></div></div>
+      <div class="figma-card" onclick="openLightbox(26)"><img src="figma/27_mp_both_equipped_switch.png" alt=""><div class="figma-card-body"><div class="figma-card-title">27. MP Both Equipped Switch</div><div class="figma-card-desc">MP 양쪽 장착 전환</div></div></div>
+      <div class="figma-card" onclick="openLightbox(27)"><img src="figma/28_cust_anim_emote_switch.png" alt=""><div class="figma-card-body"><div class="figma-card-title">28. Customize Anim↔Emote</div><div class="figma-card-desc">커마 애니↔이모트 전환</div></div></div>
+      <div class="figma-card" onclick="openLightbox(28)"><img src="figma/29_cust_both_equipped_switch.png" alt=""><div class="figma-card-body"><div class="figma-card-title">29. Customize Both Equipped</div><div class="figma-card-desc">커마 양쪽 장착 전환</div></div></div>
+      <div class="figma-card" onclick="openLightbox(29)"><img src="figma/30_primary_category_switch.png" alt=""><div class="figma-card-body"><div class="figma-card-title">30. Primary Category Switch</div><div class="figma-card-desc">1차 카테고리 전환</div></div></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">🧩 기타 — 전환·저장·스크롤</div>
+    <div class="figma-grid">
+      <div class="figma-card" onclick="openLightbox(30)"><img src="figma/31_cust_both_equipped_alt.png" alt=""><div class="figma-card-body"><div class="figma-card-title">31. Customize Both (Alt)</div><div class="figma-card-desc">커마 양쪽 장착 대안</div></div></div>
+      <div class="figma-card" onclick="openLightbox(31)"><img src="figma/32_mp_anim_to_customize.png" alt=""><div class="figma-card-body"><div class="figma-card-title">32. MP Anim → Customize</div><div class="figma-card-desc">MP에서 커마로 전환</div></div></div>
+      <div class="figma-card" onclick="openLightbox(32)"><img src="figma/33_marketplace_transition.png" alt=""><div class="figma-card-body"><div class="figma-card-title">33. Marketplace Transition</div><div class="figma-card-desc">마켓 전환 애니메이션</div></div></div>
+      <div class="figma-card" onclick="openLightbox(33)"><img src="figma/34_save_buy_ninja.png" alt=""><div class="figma-card-body"><div class="figma-card-title">34. Save/Buy Ninja</div><div class="figma-card-desc">Ninja 번들 Save/Buy</div></div></div>
+      <div class="figma-card" onclick="openLightbox(34)"><img src="figma/35_cart_remove.png" alt=""><div class="figma-card-body"><div class="figma-card-title">35. Cart Remove</div><div class="figma-card-desc">장바구니 아이템 제거</div></div></div>
+      <div class="figma-card" onclick="openLightbox(35)"><img src="figma/36_individual_anim_to_mp.png" alt=""><div class="figma-card-body"><div class="figma-card-title">36. Individual Anim → MP</div><div class="figma-card-desc">개별 애니 → 마켓</div></div></div>
+      <div class="figma-card" onclick="openLightbox(36)"><img src="figma/37_secondary_category_move.png" alt=""><div class="figma-card-body"><div class="figma-card-title">37. Secondary Category Move</div><div class="figma-card-desc">2차 카테고리 이동</div></div></div>
+      <div class="figma-card" onclick="openLightbox(37)"><img src="figma/38_save_mixed_custom.png" alt=""><div class="figma-card-body"><div class="figma-card-title">38. Save Mixed Custom</div><div class="figma-card-desc">혼합 커스텀 저장</div></div></div>
+      <div class="figma-card" onclick="openLightbox(38)"><img src="figma/39_scroll_variation.png" alt=""><div class="figma-card-body"><div class="figma-card-title">39. Scroll Variation</div><div class="figma-card-desc">스크롤 변형 케이스</div></div></div>
+    </div>
+  </div>
+
+</div>
+
 </div><!-- /content -->
+
+<div class="lightbox" id="lightbox">
+  <button class="lightbox-close" onclick="closeLightbox()" title="닫기">✕</button>
+  <button class="lightbox-nav lightbox-prev" onclick="navLightbox(-1)" title="이전">‹</button>
+  <button class="lightbox-nav lightbox-next" onclick="navLightbox(1)" title="다음">›</button>
+  <img id="lightbox-img" src="" alt="">
+  <div class="lightbox-title" id="lightbox-title"></div>
+</div>
 
 <script>
 function switchTab(name) {
-  const tabs = ['prepare','checklist','scenarios','assets','bugs','smoke'];
-  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', tabs[i] === name));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-  document.getElementById('tab-' + name).classList.add('active');
+  var tabs = document.querySelectorAll('.tab');
+  tabs.forEach(function(t) {
+    if (t.getAttribute('onclick') && t.getAttribute('onclick').indexOf("'" + name + "'") !== -1) t.classList.add('active');
+  });
+  var panel = document.getElementById('tab-' + name) || document.getElementById('panel-' + name);
+  if (panel) panel.classList.add('active');
 }
 function toggleCheck(el) {
   el.classList.toggle('checked');
@@ -1466,6 +1929,74 @@ function toggleScenario(header) {
   body.classList.toggle('open');
   chevron.classList.toggle('open');
 }
+
+var lbImages = [
+  { src:'figma/01_landing.png', title:'01. Landing' },
+  { src:'figma/02_griditem_arrow_click.png', title:'02. GridItem Arrow Click' },
+  { src:'figma/03_arrow_indicator_info_fab.png', title:'03. Arrow Indicator & Info FAB' },
+  { src:'figma/04_info_cta_bottomsheet.png', title:'04. Info CTA Bottomsheet' },
+  { src:'figma/05_other_tab_click.png', title:'05. Other Tab Click' },
+  { src:'figma/06_save_buy_bottomsheet.png', title:'06. Save/Buy Bottomsheet' },
+  { src:'figma/07_buy_share_new_look.png', title:'07. Buy & Share New Look' },
+  { src:'figma/08_marketplace_customize_view.png', title:'08. MP ↔ Customize View' },
+  { src:'figma/09_emote_tab.png', title:'09. Emote Tab' },
+  { src:'figma/10_profile_emote_removed.png', title:'10. Profile Emote Removed' },
+  { src:'figma/11_item_purchases.png', title:'11. Item Purchases' },
+  { src:'figma/12_hud_emotes_ingame.png', title:'12. HUD Emotes In-game' },
+  { src:'figma/13_customize_landing_no_purchase.png', title:'13. Customize Landing (미구매)' },
+  { src:'figma/14_bundle_purchase_fullset.png', title:'14. Bundle Purchase Full Set' },
+  { src:'figma/15_item_individual_slot.png', title:'15. Individual Slot' },
+  { src:'figma/16_actived_click_non_default.png', title:'16. Actived (Non-default)' },
+  { src:'figma/17_actived_click_default.png', title:'17. Actived (Default)' },
+  { src:'figma/18_reset_clear_undo.png', title:'18. Reset / Clear / Undo' },
+  { src:'figma/19_emote_empty_go_shopping.png', title:'19. Emote Empty → Go Shopping' },
+  { src:'figma/20_emote_select_detail.png', title:'20. Emote Select Detail' },
+  { src:'figma/21_bundle_replace_a_to_b.png', title:'21. Bundle A → B 교체' },
+  { src:'figma/22_bundle_replace_a_to_b_dup.png', title:'22. Bundle A → B (중복)' },
+  { src:'figma/23_individual_equip_all_to_bundle.png', title:'23. 개별 → 번들 전환' },
+  { src:'figma/24_mp_bundle_tab_switch.png', title:'24. MP Bundle Tab Switch' },
+  { src:'figma/25_emotes_tab_switch.png', title:'25. Emotes Tab Switch' },
+  { src:'figma/26_bundle_tab_buy_bottomsheet.png', title:'26. Bundle Tab Buy Bottomsheet' },
+  { src:'figma/27_mp_both_equipped_switch.png', title:'27. MP Both Equipped Switch' },
+  { src:'figma/28_cust_anim_emote_switch.png', title:'28. Customize Anim↔Emote' },
+  { src:'figma/29_cust_both_equipped_switch.png', title:'29. Customize Both Equipped' },
+  { src:'figma/30_primary_category_switch.png', title:'30. Primary Category Switch' },
+  { src:'figma/31_cust_both_equipped_alt.png', title:'31. Customize Both (Alt)' },
+  { src:'figma/32_mp_anim_to_customize.png', title:'32. MP Anim → Customize' },
+  { src:'figma/33_marketplace_transition.png', title:'33. Marketplace Transition' },
+  { src:'figma/34_save_buy_ninja.png', title:'34. Save/Buy Ninja' },
+  { src:'figma/35_cart_remove.png', title:'35. Cart Remove' },
+  { src:'figma/36_individual_anim_to_mp.png', title:'36. Individual Anim → MP' },
+  { src:'figma/37_secondary_category_move.png', title:'37. Secondary Category Move' },
+  { src:'figma/38_save_mixed_custom.png', title:'38. Save Mixed Custom' },
+  { src:'figma/39_scroll_variation.png', title:'39. Scroll Variation' }
+];
+var lbIdx = 0;
+function openLightbox(i) {
+  lbIdx = i;
+  document.getElementById('lightbox-img').src = lbImages[i].src;
+  document.getElementById('lightbox-title').textContent = lbImages[i].title;
+  document.getElementById('lightbox').classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('active');
+  document.body.style.overflow = '';
+}
+function navLightbox(dir) {
+  lbIdx = (lbIdx + dir + lbImages.length) % lbImages.length;
+  document.getElementById('lightbox-img').src = lbImages[lbIdx].src;
+  document.getElementById('lightbox-title').textContent = lbImages[lbIdx].title;
+}
+document.getElementById('lightbox').addEventListener('click', function(e) {
+  if (e.target === this) closeLightbox();
+});
+document.addEventListener('keydown', function(e) {
+  if (!document.getElementById('lightbox').classList.contains('active')) return;
+  if (e.key === 'Escape') closeLightbox();
+  if (e.key === 'ArrowLeft') navLightbox(-1);
+  if (e.key === 'ArrowRight') navLightbox(1);
+});
 </script>
 </body>
 </html>
