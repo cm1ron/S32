@@ -1,0 +1,58 @@
+{
+  "name": "android-device-manager",
+  "version": "1.0.0",
+  "description": "Android Device Manager - ADB/scrcpy 기반 디바이스 관리 도구",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "build": "electron-builder --win dir",
+    "build:mac": "electron-builder --mac dir",
+    "build:installer": "electron-builder --win nsis"
+  },
+  "author": "",
+  "license": "MIT",
+  "build": {
+    "appId": "com.overdare.device-manager",
+    "productName": "Android Device Manager",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "src/**/*",
+      "lib/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "vendor/scrcpy",
+        "to": "scrcpy",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "win": {
+      "target": [
+        "dir"
+      ],
+      "icon": null,
+      "sign": false,
+      "signAndEditExecutable": false
+    },
+    "mac": {
+      "target": [
+        "dir"
+      ],
+      "identity": null
+    },
+    "portable": {
+      "artifactName": "AndroidDeviceManager.exe"
+    }
+  },
+  "devDependencies": {
+    "electron": "^41.0.4",
+    "electron-builder": "^25.1.8"
+  }
+}

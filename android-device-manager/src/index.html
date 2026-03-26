@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self';">
+  <title>Android Device Manager</title>
+  <link rel="stylesheet" href="styles/main.css">
+</head>
+<body>
+  <nav id="sidebar">
+    <button class="nav-btn active" data-panel="device" title="디바이스 정보">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12" y2="18.01"/></svg>
+    </button>
+    <button class="nav-btn" data-panel="apps" title="앱 관리">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+    </button>
+    <button class="nav-btn" data-panel="logcat" title="Logcat">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+    </button>
+    <div class="nav-separator"></div>
+    <button class="nav-btn" data-panel="files" title="파일 매니저">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+    </button>
+    <button class="nav-btn" data-panel="mirror" title="미러링 & Inspector">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/><circle cx="17" cy="7" r="3" fill="none"/><line x1="19.5" y1="9.5" x2="21" y2="11"/></svg>
+    </button>
+  </nav>
+
+  <div id="main-content">
+    <div id="toolbar">
+      <span class="status-dot disconnected" id="status-dot"></span>
+      <span class="toolbar-label">Device</span>
+      <select id="device-selector">
+        <option value="">디바이스를 연결해주세요...</option>
+      </select>
+      <button class="btn btn-sm" id="wireless-connect-btn">무선 연결</button>
+      <button class="btn btn-sm" id="wireless-disconnect-btn" style="display:none">무선 해제</button>
+    </div>
+
+    <div id="wireless-modal" class="modal-overlay" style="display:none">
+      <div class="modal-box">
+        <h3 style="margin-bottom:12px">무선 디버깅 연결</h3>
+        <p style="font-size:12px;color:var(--text-muted);margin-bottom:16px">
+          설정 → 개발자 옵션 → 무선 디버깅 → 페어링 코드로 기기 페어링
+        </p>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div>
+            <label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px">IP:Port (페어링용)</label>
+            <input class="input" id="pair-address" placeholder="예: 192.168.0.10:37123">
+          </div>
+          <div>
+            <label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px">페어링 코드 (6자리)</label>
+            <input class="input" id="pair-code" placeholder="예: 482924" maxlength="6">
+          </div>
+          <button class="btn btn-primary" id="pair-btn">페어링</button>
+          <div class="modal-divider"></div>
+          <div>
+            <label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px">IP:Port (연결용 — 페어링 후)</label>
+            <input class="input" id="connect-address" placeholder="예: 192.168.0.10:43567">
+          </div>
+          <button class="btn btn-primary" id="connect-btn">연결</button>
+        </div>
+        <div id="wireless-status" style="margin-top:12px;font-size:12px;color:var(--text-muted)"></div>
+        <button class="btn btn-sm" id="wireless-modal-close" style="margin-top:12px">닫기</button>
+      </div>
+    </div>
+
+    <div id="panel-container">
+      <!-- Device Panel -->
+      <div class="panel active" id="panel-device">
+        <h2 class="panel-title">디바이스 정보</h2>
+        <div id="device-info-content">
+          <p style="color:var(--text-muted)">디바이스를 선택하면 정보가 표시됩니다.</p>
+        </div>
+      </div>
+
+      <!-- Apps Panel -->
+      <div class="panel" id="panel-apps">
+        <h2 class="panel-title">앱 관리</h2>
+        <div class="drop-zone" id="apk-drop-zone">
+          APK 파일을 드래그하거나 클릭 — 패키지 선택 시 클린 설치 (삭제→재설치)
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center;">
+          <input class="input" id="package-search" placeholder="패키지 검색..." style="flex:1">
+          <button class="btn btn-sm" id="refresh-packages">새로고침</button>
+        </div>
+        <div class="package-list" id="package-list"></div>
+      </div>
+
+      <!-- Logcat Panel -->
+      <div class="panel" id="panel-logcat">
+        <h2 class="panel-title">Logcat 모니터링</h2>
+        <div class="logcat-container">
+          <div class="logcat-toolbar">
+            <button class="btn btn-sm btn-primary" id="logcat-toggle">시작</button>
+            <button class="btn btn-sm" id="logcat-clear">지우기</button>
+            <select class="filter-select" id="logcat-level">
+              <option value="">전체 레벨</option>
+              <option value="V">Verbose</option>
+              <option value="D">Debug</option>
+              <option value="I">Info</option>
+              <option value="W">Warning</option>
+              <option value="E">Error</option>
+            </select>
+            <input class="input" id="logcat-filter" placeholder="태그/키워드 필터..." style="width:200px">
+            <label style="font-size:12px;color:var(--text-muted);display:flex;align-items:center;gap:4px;margin-left:auto;">
+              <input type="checkbox" id="logcat-autoscroll" checked> 자동스크롤
+            </label>
+            <button class="btn btn-sm" id="logcat-save">저장</button>
+            <span class="badge" id="logcat-count">0 lines</span>
+          </div>
+          <div class="logcat-output" id="logcat-output"></div>
+        </div>
+      </div>
+
+      <!-- Files Panel -->
+      <div class="panel" id="panel-files">
+        <h2 class="panel-title">파일 매니저</h2>
+        <div class="file-browser">
+          <div class="file-path-bar">
+            <button class="btn btn-sm" id="file-up">↑</button>
+            <input class="input" id="file-path-input" value="/sdcard" style="flex:1">
+            <button class="btn btn-sm" id="file-go">이동</button>
+            <button class="btn btn-sm" id="file-refresh">새로고침</button>
+            <button class="btn btn-sm" id="file-upload">업로드</button>
+          </div>
+          <div class="file-list" id="file-list"></div>
+        </div>
+      </div>
+
+      <!-- Mirror & Inspector Panel (통합) -->
+      <div class="panel" id="panel-mirror">
+        <div class="mirror-inspector-toolbar">
+          <button class="btn btn-primary" id="scrcpy-toggle">scrcpy (고성능)</button>
+          <button class="btn" id="mirror-toggle">내장 미러링</button>
+          <button class="btn" id="mirror-screenshot">스크린샷</button>
+          <div class="toolbar-divider"></div>
+          <button class="btn btn-sm" id="nav-back" title="뒤로가기">◀</button>
+          <button class="btn btn-sm" id="nav-home" title="홈">●</button>
+          <button class="btn btn-sm" id="nav-recent" title="최근 앱">■</button>
+          <div class="toolbar-divider"></div>
+          <button class="btn" id="inspector-refresh">UI 스캔</button>
+          <button class="btn btn-sm" id="inspector-copy-xpath">XPath</button>
+          <button class="btn btn-sm" id="inspector-copy-id">ID</button>
+          <button class="btn btn-sm" id="inspector-copy-desc">Desc</button>
+          <button class="btn btn-sm" id="inspector-copy-text">Text</button>
+          <button class="btn btn-sm btn-accent" id="inspector-copy-selector">셀렉터</button>
+          <div class="toolbar-divider"></div>
+          <select class="filter-select" id="mirror-fps">
+            <option value="500">2 FPS</option>
+            <option value="300">3 FPS</option>
+            <option value="200" selected>5 FPS</option>
+            <option value="100">10 FPS</option>
+          </select>
+          <span class="badge" id="mirror-status">중지됨</span>
+        </div>
+        <div class="mirror-inspector-layout">
+          <div class="mi-screen-wrap">
+            <div class="mi-screen" id="mi-screen">
+              <img id="mi-img" src="" alt="">
+              <canvas id="mi-canvas"></canvas>
+              <div class="mirror-placeholder" id="mi-placeholder">미러링 시작을 눌러주세요</div>
+            </div>
+            <div class="mi-log-buttons">
+              <button class="btn btn-sm btn-accent" id="pull-all-logs">전체 로그 추출</button>
+              <button class="btn btn-sm btn-folder" id="open-logs-folder">로그 폴더</button>
+              <button class="btn btn-sm btn-folder" id="open-screenshot-folder">스크린샷 폴더</button>
+            </div>
+          </div>
+          <div class="mi-right">
+            <div class="mi-tree-wrap">
+              <div class="card-title" style="padding:8px 12px;border-bottom:1px solid var(--border)">UI 트리</div>
+              <div class="inspector-tree" id="inspector-tree"></div>
+            </div>
+            <div class="mi-props-wrap">
+              <div class="card-title" style="padding:8px 12px;border-bottom:1px solid var(--border)">속성</div>
+              <div class="inspector-props" id="inspector-props">
+                <p style="color:var(--text-muted);font-size:12px;padding:8px">요소를 선택하면 속성이 표시됩니다.</p>
+              </div>
+            </div>
+            <div class="mi-memo-wrap">
+              <div class="card-title" style="padding:8px 12px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+                <span>메모</span>
+                <button class="btn btn-sm" id="memo-clear" style="padding:2px 8px;font-size:11px">지우기</button>
+              </div>
+              <textarea id="inspector-memo" placeholder="복사한 값을 여기에 붙여넣기..."></textarea>
+            </div>
+            <div class="mi-log-viewer" id="extracted-log-viewer" style="display:none">
+              <div class="extracted-log-header">
+                <span id="extracted-log-info"></span>
+                <button class="btn btn-sm" id="extracted-log-close">닫기</button>
+              </div>
+              <div class="logcat-output" id="extracted-log-content"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-container" id="toast-container"></div>
+
+  <script src="js/app.js"></script>
+  <script src="panels/device.js"></script>
+  <script src="panels/apps.js"></script>
+  <script src="panels/logcat.js"></script>
+  <script src="panels/files.js"></script>
+  <script src="panels/mirror-inspector.js"></script>
+</body>
+</html>
