@@ -418,12 +418,12 @@ const MirrorInspector = {
       div.className = `tree-node${node === this.selectedNode ? ' selected' : ''}`;
       div.style.paddingLeft = (node.depth * 14 + 6) + 'px';
 
-      const cls = node.class.split('.').pop();
+      const cls = node.class;
       const tog = node.childCount > 0 ? (node.expanded ? '▾' : '▸') : ' ';
-      const txt = node.text ? ` <span class="tree-node-text">"${this.esc(node.text.substring(0, 25))}"</span>` : '';
-      const rid = node.resourceId ? ` <span class="tree-node-id">${this.esc(node.resourceId.split('/').pop())}</span>` : '';
+      const desc = node.contentDesc ? ` <span class="tree-node-desc">content-desc="${this.esc(node.contentDesc.substring(0, 30))}"</span>` : '';
+      const rid = node.resourceId ? ` <span class="tree-node-id">resource-id="${this.esc(node.resourceId)}"</span>` : '';
 
-      div.innerHTML = `<span class="tree-toggle">${tog}</span><span class="tree-node-label">${this.esc(cls)}</span>${txt}${rid}`;
+      div.innerHTML = `<span class="tree-toggle">${tog}</span><span class="tree-node-label">&lt;${this.esc(cls)}&gt;</span>${desc}${rid}`;
 
       div.addEventListener('click', (e) => {
         if (e.target.classList.contains('tree-toggle') && node.childCount > 0) {

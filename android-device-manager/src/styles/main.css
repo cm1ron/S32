@@ -547,7 +547,8 @@ body {
 }
 .tree-node-label { color: var(--purple); }
 .tree-node-text { color: var(--green); margin-left: 4px; font-size: 11px; }
-.tree-node-id { color: var(--yellow); margin-left: 4px; font-size: 11px; }
+.tree-node-desc { color: #ce9178; margin-left: 4px; font-size: 11px; }
+.tree-node-id { color: #9cdcfe; margin-left: 4px; font-size: 11px; }
 
 .inspector-props {
   flex: 1;
