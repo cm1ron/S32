@@ -193,11 +193,14 @@ class AdbManager {
       if (result.server) break;
       try {
         const out = await this._execText(
-          ['shell', 'grep', '-m', '1', 'createChannel', logFile],
+          ['shell', 'grep', 'createChannel', logFile],
           serial, { timeout: 5000 }
         );
-        const m = out.match(/farm-(.+?)\.overdare\.com/);
-        if (m) result.server = m[1];
+        const lines = out.trim().split('\n').reverse();
+        for (const line of lines) {
+          const m = line.match(/farm-(.+?)\.(?:overdare\.com|ovdr\.io)/);
+          if (m) { result.server = m[1]; break; }
+        }
       } catch {}
     }
 
