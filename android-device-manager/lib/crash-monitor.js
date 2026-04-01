@@ -10,301 +10,312 @@ class CrashMonitor extends EventEmitter {
     super();
     this.adbPath = adbPath || 'adb';
     this.crashDir = crashDir;
-    this.process = null;
-    this.serial = null;
-    this.deviceName = '';
+
+    this.logcatProcs = new Map();
+    this.deviceNames = new Map();
+    this.deviceBuffers = new Map();
+
     this.watchedPkg = null;
-    this.watchedPid = null;
+    this.watchedPids = new Map();
     this.watchdogTimer = null;
     this.watchdogInterval = 3000;
-    this.buffer = [];
-    this.maxBuffer = 200;
-    this.collecting = false;
-    this.collectLines = [];
-    this.collectRemaining = 0;
-    this.crashType = null;
+
+    this.pollTimer = null;
+    this.pollInterval = 5000;
+    this.seenCrashKeys = new Set();
+
+    this.connectedSerials = [];
     this.crashes = [];
-    this._lastWatchdogAlive = true;
+    this.collecting = new Map();
   }
 
-  _execAdb(args) {
+  _exec(args, timeout = 5000) {
     return new Promise((resolve) => {
-      const fullArgs = this.serial ? ['-s', this.serial, ...args] : args;
-      execFile(this.adbPath, fullArgs, { timeout: 5000 }, (err, stdout) => {
-        resolve(err ? '' : stdout);
+      execFile(this.adbPath, args, { timeout, maxBuffer: 1024 * 512 }, (err, stdout) => {
+        resolve(err ? '' : (stdout || ''));
       });
     });
   }
 
-  async _captureContext() {
-    const [activityDump, windowDump] = await Promise.all([
-      this._execAdb(['shell', 'dumpsys', 'activity', 'top']),
-      this._execAdb(['shell', 'dumpsys', 'window', 'windows']),
-    ]);
-
-    let activity = '';
-    const actMatch = activityDump.match(/ACTIVITY\s+(\S+)\s/);
-    if (actMatch) activity = actMatch[1];
-
-    let focusedWindow = '';
-    const winMatch = windowDump.match(/mCurrentFocus=Window\{[^}]*\s+(\S+)\}/);
-    if (winMatch) focusedWindow = winMatch[1];
-
-    return { activity: activity || focusedWindow || 'unknown', rawActivity: activityDump.slice(0, 2000) };
+  _execForSerial(serial, args) {
+    return this._exec(['-s', serial, ...args]);
   }
 
-  async _getPid(pkg) {
+  async _resolveDeviceName(serial) {
+    if (this.deviceNames.has(serial)) return this.deviceNames.get(serial);
+    const out = await this._execForSerial(serial, ['shell', 'getprop', 'ro.product.model']);
+    const name = out.trim() || serial;
+    this.deviceNames.set(serial, name);
+    return name;
+  }
+
+  async _getPid(serial, pkg) {
     if (!pkg) return null;
-    try {
-      const out = await this._execAdb(['shell', 'pidof', pkg]);
-      const pid = out.trim().split(/\s+/)[0];
-      return pid ? parseInt(pid, 10) : null;
-    } catch {
-      return null;
-    }
+    const out = await this._execForSerial(serial, ['shell', 'pidof', pkg]);
+    const pid = out.trim().split(/\s+/)[0];
+    return pid ? parseInt(pid, 10) : null;
   }
 
-  async _resolveDeviceName() {
-    try {
-      const out = await this._execAdb(['shell', 'getprop', 'ro.product.model']);
-      this.deviceName = out.trim() || this.serial;
-    } catch {
-      this.deviceName = this.serial;
-    }
-  }
-
-  async _autoDetectOverdareApp() {
+  async _autoDetectPkg(serial) {
     for (const pkg of OVERDARE_PKGS) {
-      const pid = await this._getPid(pkg);
-      if (pid) {
-        this.watchedPkg = pkg;
-        this.watchedPid = pid;
-        this._lastWatchdogAlive = true;
-        return;
+      const pid = await this._getPid(serial, pkg);
+      if (pid) return { pkg, pid };
+    }
+    return null;
+  }
+
+  start(serialOrSerials) {
+    this.stop();
+
+    const serials = Array.isArray(serialOrSerials)
+      ? serialOrSerials
+      : serialOrSerials ? [serialOrSerials] : [];
+    this.connectedSerials = [...serials];
+
+    for (const serial of serials) {
+      this._startLogcatStream(serial);
+      this._resolveDeviceName(serial);
+    }
+
+    this._startPollTimer();
+    this._startWatchdog();
+  }
+
+  updateDevices(serials) {
+    const newSet = new Set(serials);
+    const oldSet = new Set(this.connectedSerials);
+
+    for (const s of serials) {
+      if (!oldSet.has(s)) {
+        this._startLogcatStream(s);
+        this._resolveDeviceName(s);
       }
     }
+    for (const s of this.connectedSerials) {
+      if (!newSet.has(s)) {
+        this._stopLogcatStream(s);
+        this.deviceNames.delete(s);
+        this.deviceBuffers.delete(s);
+        this.watchedPids.delete(s);
+        this.collecting.delete(s);
+      }
+    }
+    this.connectedSerials = [...serials];
   }
 
-  start(serial, pkg) {
-    this.stop();
-    this.serial = serial;
-    this.watchedPkg = pkg || null;
-    this.watchedPid = null;
-    this._lastWatchdogAlive = true;
+  _startLogcatStream(serial) {
+    if (this.logcatProcs.has(serial)) return;
 
-    this._resolveDeviceName();
+    const args = ['-s', serial, 'logcat', '-b', 'main,crash', '-v', 'time'];
+    const proc = spawn(this.adbPath, args);
 
-    const args = serial
-      ? ['-s', serial, 'logcat', '-b', 'main,crash', '-v', 'time']
-      : ['logcat', '-b', 'main,crash', '-v', 'time'];
+    if (!proc || !proc.stdout) {
+      return;
+    }
 
-    this.process = spawn(this.adbPath, args);
+    this.deviceBuffers.set(serial, []);
+    this.collecting.set(serial, null);
 
     let partial = '';
-    this.process.stdout.on('data', (chunk) => {
+    proc.stdout.on('data', (chunk) => {
       const text = partial + chunk.toString();
       const lines = text.split('\n');
       partial = lines.pop();
       for (const line of lines) {
-        this._processLine(line);
+        this._processStreamLine(serial, line);
       }
     });
 
-    this.process.on('close', () => {
-      this.process = null;
+    proc.on('close', () => {
+      this.logcatProcs.delete(serial);
     });
 
-    this.process.on('error', () => {
-      this.process = null;
+    proc.on('error', () => {
+      this.logcatProcs.delete(serial);
     });
 
-    if (this.watchedPkg) {
-      this._initWatchdog();
-    } else {
-      this._autoDetectOverdareApp().then(() => {
-        if (this.watchedPkg) {
-          this._initWatchdog();
-        }
-      });
+    this.logcatProcs.set(serial, proc);
+  }
+
+  _stopLogcatStream(serial) {
+    const proc = this.logcatProcs.get(serial);
+    if (proc) {
+      try { proc.kill(); } catch {}
+      this.logcatProcs.delete(serial);
     }
   }
 
-  setWatchedApp(pkg) {
-    this.watchedPkg = pkg || null;
-    this.watchedPid = null;
-    this._lastWatchdogAlive = true;
-    if (this.watchdogTimer) {
-      clearInterval(this.watchdogTimer);
-      this.watchdogTimer = null;
-    }
-    if (this.watchedPkg && this.serial) {
-      this._initWatchdog();
-    }
-  }
+  _processStreamLine(serial, line) {
+    const buf = this.deviceBuffers.get(serial) || [];
+    buf.push(line);
+    if (buf.length > 300) buf.splice(0, buf.length - 300);
+    this.deviceBuffers.set(serial, buf);
 
-  async _initWatchdog() {
-    const pid = await this._getPid(this.watchedPkg);
-    this.watchedPid = pid;
-    this._lastWatchdogAlive = !!pid;
-
-    if (this.watchdogTimer) clearInterval(this.watchdogTimer);
-    this.watchdogTimer = setInterval(() => this._watchdogCheck(), this.watchdogInterval);
-  }
-
-  async _watchdogCheck() {
-    if (!this.watchedPkg || !this.serial) return;
-
-    const pid = await this._getPid(this.watchedPkg);
-
-    if (this._lastWatchdogAlive && !pid) {
-      const prevPid = this.watchedPid;
-      this.watchedPid = null;
-      this._lastWatchdogAlive = false;
-      await this._handleUnexpectedExit(prevPid);
-    } else if (pid) {
-      if (this.watchedPid !== pid) {
-        this.watchedPid = pid;
-      }
-      this._lastWatchdogAlive = true;
-    } else if (!pid && !this._lastWatchdogAlive) {
-      await this._autoDetectOverdareApp();
-      if (this.watchedPid) {
-        this._lastWatchdogAlive = true;
-      }
-    }
-  }
-
-  async _handleUnexpectedExit(prevPid) {
-    const now = new Date();
-    const recentLines = [...this.buffer].slice(-60);
-
-    const hasLogcatCrash = recentLines.some(
-      (l) => /FATAL EXCEPTION/i.test(l) || /FATAL signal/i.test(l) || /ANR in/i.test(l)
-    );
-    if (hasLogcatCrash) return;
-
-    let stacktrace = '';
-    try {
-      const crashBuf = await this._execAdb(['shell', 'logcat', '-d', '-b', 'crash', '-t', '100']);
-      if (crashBuf.trim()) {
-        const pkgLines = crashBuf.split('\n').filter(
-          (l) => l.includes(this.watchedPkg) || (prevPid && l.includes(String(prevPid)))
-        );
-        if (pkgLines.length) {
-          stacktrace = pkgLines.join('\n');
-        }
-      }
-    } catch {}
-
-    if (!stacktrace) {
-      const contextLines = recentLines.filter(
-        (l) => l.includes(this.watchedPkg) || (prevPid && l.includes(String(prevPid)))
-      );
-      if (contextLines.length) {
-        stacktrace = contextLines.join('\n');
-      }
-    }
-
-    if (!stacktrace) {
-      stacktrace = `Process ${this.watchedPkg} (PID: ${prevPid || 'unknown'}) terminated unexpectedly.\n` +
-        `No standard crash signature found in logcat.\n` +
-        `This may indicate a native/Unreal Engine crash or low-memory kill.\n\n` +
-        `--- Recent logcat context ---\n` +
-        recentLines.slice(-30).join('\n');
-    }
-
-    const crash = {
-      time: now.toISOString(),
-      timeLocal: this._formatTime(now),
-      type: 'UNEXPECTED_EXIT',
-      app: this.watchedPkg,
-      device: this.deviceName || this.serial,
-      serial: this.serial,
-      activity: 'unknown',
-      preview: `${this.watchedPkg} (PID: ${prevPid || '?'}) 프로세스가 예기치 않게 종료됨`,
-      stacktrace,
-      file: null,
-      summary: null,
-    };
-
-    try {
-      const ctx = await this._captureContext();
-      crash.activity = ctx.activity;
-    } catch {}
-
-    const filePath = this._saveCrashLog(now, crash, stacktrace);
-    crash.file = filePath;
-    this.crashes.push(crash);
-    this.emit('crash', crash);
-  }
-
-  stop() {
-    if (this.watchdogTimer) {
-      clearInterval(this.watchdogTimer);
-      this.watchdogTimer = null;
-    }
-    if (this.process) {
-      this.process.kill();
-      this.process = null;
-    }
-    this.serial = null;
-    this.deviceName = '';
-    this.watchedPkg = null;
-    this.watchedPid = null;
-    this.buffer = [];
-    this.collecting = false;
-    this.collectLines = [];
-    this._lastWatchdogAlive = true;
-  }
-
-  isRunning() {
-    return this.process !== null;
-  }
-
-  _processLine(line) {
-    this.buffer.push(line);
-    if (this.buffer.length > this.maxBuffer) {
-      this.buffer.shift();
-    }
-
-    if (this.collecting) {
-      this.collectLines.push(line);
-      this.collectRemaining--;
-      if (this.collectRemaining <= 0) {
-        this._finishCrash();
+    const state = this.collecting.get(serial);
+    if (state) {
+      state.lines.push(line);
+      state.remaining--;
+      if (state.remaining <= 0) {
+        this._finishStreamCrash(serial, state);
+        this.collecting.set(serial, null);
       }
       return;
     }
 
     if (/FATAL EXCEPTION/i.test(line)) {
-      this._startCollect('CRASH', line);
+      this._startStreamCollect(serial, 'CRASH', line);
     } else if (/ANR in/i.test(line)) {
-      this._startCollect('ANR', line);
+      this._startStreamCollect(serial, 'ANR', line);
     } else if (/FATAL signal/i.test(line)) {
-      this._startCollect('NATIVE_CRASH', line);
+      this._startStreamCollect(serial, 'NATIVE_CRASH', line);
     }
   }
 
-  _startCollect(type, triggerLine) {
-    this.collecting = true;
-    this.crashType = type;
-    const contextBefore = this.buffer.slice(-30, -1);
-    this.collectLines = [...contextBefore, triggerLine];
-    this.collectRemaining = 30;
+  _startStreamCollect(serial, type, triggerLine) {
+    const buf = this.deviceBuffers.get(serial) || [];
+    const contextBefore = buf.slice(-30, -1);
+    this.collecting.set(serial, {
+      type,
+      lines: [...contextBefore, triggerLine],
+      remaining: 30,
+    });
   }
 
-  _extractAppFromLines(lines) {
+  async _finishStreamCrash(serial, state) {
+    const app = this._extractApp(state.lines);
+    const isOur = app && OVERDARE_PKGS.some((p) => app.startsWith(p));
+    const isWatched = app && this.watchedPkg && app.startsWith(this.watchedPkg);
+
+    if (!isOur && !isWatched) return;
+
+    const crashKey = this._makeCrashKey(serial, state.type, app, state.lines);
+    if (this.seenCrashKeys.has(crashKey)) return;
+    this.seenCrashKeys.add(crashKey);
+
+    await this._emitCrash(serial, state.type, app, state.lines.join('\n'));
+  }
+
+  _startPollTimer() {
+    if (this.pollTimer) clearInterval(this.pollTimer);
+    this.pollTimer = setInterval(() => this._pollAllDevices(), this.pollInterval);
+    setTimeout(() => this._pollAllDevices(), 1000);
+  }
+
+  async _pollAllDevices() {
+    for (const serial of this.connectedSerials) {
+      try {
+        await this._pollCrashBuffer(serial);
+      } catch {}
+    }
+  }
+
+  async _pollCrashBuffer(serial) {
+    const raw = await this._execForSerial(serial, ['shell', 'logcat', '-d', '-b', 'crash', '-t', '100']);
+    if (!raw || !raw.trim()) return;
+
+    const lines = raw.split('\n');
+    let i = 0;
+    while (i < lines.length) {
+      const line = lines[i];
+
+      if (/FATAL EXCEPTION/i.test(line)) {
+        const block = this._extractBlock(lines, i, 'CRASH');
+        const app = this._extractApp(block.lines);
+        if (app && this._isRelevantApp(app)) {
+          const key = this._makeCrashKey(serial, 'CRASH', app, block.lines);
+          if (!this.seenCrashKeys.has(key)) {
+            this.seenCrashKeys.add(key);
+            await this._emitCrash(serial, 'CRASH', app, block.lines.join('\n'));
+          }
+        }
+        i = block.endIdx;
+        continue;
+      }
+
+      if (/FATAL signal/i.test(line)) {
+        const block = this._extractBlock(lines, i, 'NATIVE_CRASH');
+        const app = this._extractApp(block.lines);
+        if (app && this._isRelevantApp(app)) {
+          const key = this._makeCrashKey(serial, 'NATIVE_CRASH', app, block.lines);
+          if (!this.seenCrashKeys.has(key)) {
+            this.seenCrashKeys.add(key);
+            await this._emitCrash(serial, 'NATIVE_CRASH', app, block.lines.join('\n'));
+          }
+        }
+        i = block.endIdx;
+        continue;
+      }
+
+      if (/ANR in/i.test(line)) {
+        const block = this._extractBlock(lines, i, 'ANR');
+        const app = this._extractApp(block.lines);
+        if (app && this._isRelevantApp(app)) {
+          const key = this._makeCrashKey(serial, 'ANR', app, block.lines);
+          if (!this.seenCrashKeys.has(key)) {
+            this.seenCrashKeys.add(key);
+            await this._emitCrash(serial, 'ANR', app, block.lines.join('\n'));
+          }
+        }
+        i = block.endIdx;
+        continue;
+      }
+
+      i++;
+    }
+  }
+
+  _extractBlock(lines, startIdx, type) {
+    const blockLines = [];
+    const contextStart = Math.max(0, startIdx - 5);
+    for (let j = contextStart; j < startIdx; j++) blockLines.push(lines[j]);
+
+    let endIdx = startIdx;
+    for (let j = startIdx; j < Math.min(lines.length, startIdx + 40); j++) {
+      blockLines.push(lines[j]);
+      endIdx = j + 1;
+    }
+    return { lines: blockLines, endIdx };
+  }
+
+  _isRelevantApp(app) {
+    if (!app) return false;
+    const isOur = OVERDARE_PKGS.some((p) => app.startsWith(p));
+    const isWatched = this.watchedPkg && app.startsWith(this.watchedPkg);
+    return isOur || isWatched;
+  }
+
+  _makeCrashKey(serial, type, app, lines) {
+    let ts = '';
     for (const l of lines) {
-      const procMatch = l.match(/Process:\s*(\S+?)(?:,|\s|$)/i);
-      if (procMatch) return procMatch[1];
+      const m = l.match(/^(\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}\.\d+)/);
+      if (m) { ts = m[1]; break; }
+    }
+    let pid = '';
+    for (const l of lines) {
+      const m = l.match(/PID:\s*(\d+)/i);
+      if (m) { pid = m[1]; break; }
+    }
+    if (!pid) {
+      for (const l of lines) {
+        const m = l.match(/^\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}\.\d+\s+(\d+)/);
+        if (m) { pid = m[1]; break; }
+      }
+    }
+    return `${serial}|${type}|${app}|${ts}|${pid}`;
+  }
+
+  _extractApp(lines) {
+    for (const l of lines) {
+      const m = l.match(/Process:\s*(\S+?)(?:,|\s|$)/i);
+      if (m) return m[1];
     }
     for (const l of lines) {
-      const sigMatch = l.match(/FATAL signal.*?tid\s+\d+\s+\(([^)]+)\)/i);
-      if (sigMatch) return sigMatch[1];
+      const m = l.match(/FATAL signal.*?tid\s+\d+\s+\(([^)]+)\)/i);
+      if (m) return m[1];
     }
     for (const l of lines) {
-      const anrMatch = l.match(/ANR in\s+(\S+)/i);
-      if (anrMatch) return anrMatch[1];
+      const m = l.match(/ANR in\s+(\S+)/i);
+      if (m) return m[1];
     }
     for (const l of lines) {
       for (const pkg of OVERDARE_PKGS) {
@@ -314,35 +325,68 @@ class CrashMonitor extends EventEmitter {
     return '';
   }
 
-  async _finishCrash() {
-    this.collecting = false;
-    const now = new Date();
-    const stacktrace = this.collectLines.join('\n');
+  _startWatchdog() {
+    if (this.watchdogTimer) clearInterval(this.watchdogTimer);
+    this.watchdogTimer = setInterval(() => this._watchdogTick(), this.watchdogInterval);
+  }
 
-    const app = this._extractAppFromLines(this.collectLines);
+  async _watchdogTick() {
+    for (const serial of this.connectedSerials) {
+      await this._watchdogCheckDevice(serial);
+    }
+  }
 
-    const isOurApp = app && OVERDARE_PKGS.some((p) => app.startsWith(p));
-    const isWatchedApp = app && this.watchedPkg && app.startsWith(this.watchedPkg);
+  async _watchdogCheckDevice(serial) {
+    const detected = await this._autoDetectPkg(serial);
+    const prevPid = this.watchedPids.get(serial);
+    const pkg = this.watchedPkg || (detected ? detected.pkg : null);
 
-    if (!isOurApp && !isWatchedApp) {
-      this.collectLines = [];
+    if (!pkg) {
+      if (detected) {
+        this.watchedPids.set(serial, detected.pid);
+      }
       return;
     }
 
-    let context = { activity: 'unknown', rawActivity: '' };
+    const currentPid = await this._getPid(serial, pkg);
+
+    if (prevPid && !currentPid) {
+      this.watchedPids.set(serial, null);
+      const crashKey = `${serial}|UNEXPECTED_EXIT|${pkg}|${Date.now()}`;
+      if (!this.seenCrashKeys.has(crashKey)) {
+        this.seenCrashKeys.add(crashKey);
+        const buf = this.deviceBuffers.get(serial) || [];
+        const context = buf.slice(-40).join('\n');
+        const stacktrace = `Process ${pkg} (PID: ${prevPid}) terminated unexpectedly.\n` +
+          `No standard crash signature found in logcat stream.\n\n` +
+          `--- Recent logcat context ---\n${context}`;
+        await this._emitCrash(serial, 'UNEXPECTED_EXIT', pkg, stacktrace);
+      }
+    } else if (currentPid) {
+      this.watchedPids.set(serial, currentPid);
+    }
+  }
+
+  async _emitCrash(serial, type, app, stacktrace) {
+    const now = new Date();
+    const deviceName = this.deviceNames.get(serial) || serial;
+
+    let activity = 'unknown';
     try {
-      context = await this._captureContext();
+      const dump = await this._execForSerial(serial, ['shell', 'dumpsys', 'activity', 'top']);
+      const m = dump.match(/ACTIVITY\s+(\S+)\s/);
+      if (m) activity = m[1];
     } catch {}
 
     const crash = {
       time: now.toISOString(),
       timeLocal: this._formatTime(now),
-      type: this.crashType,
+      type,
       app,
-      device: this.deviceName || this.serial,
-      serial: this.serial,
-      activity: context.activity,
-      preview: this.collectLines.slice(0, 5).join('\n'),
+      device: deviceName,
+      serial,
+      activity,
+      preview: stacktrace.split('\n').slice(0, 5).join('\n'),
       stacktrace,
       file: null,
       summary: null,
@@ -351,9 +395,7 @@ class CrashMonitor extends EventEmitter {
     const filePath = this._saveCrashLog(now, crash, stacktrace);
     crash.file = filePath;
     this.crashes.push(crash);
-
     this.emit('crash', crash);
-    this.collectLines = [];
   }
 
   _formatTime(d) {
@@ -366,7 +408,7 @@ class CrashMonitor extends EventEmitter {
     fs.mkdirSync(dir, { recursive: true });
 
     const time = `${now.getHours().toString().padStart(2, '0')}-${now.getMinutes().toString().padStart(2, '0')}-${now.getSeconds().toString().padStart(2, '0')}`;
-    const fileName = `${crash.type.toLowerCase()}_${time}.log`;
+    const fileName = `${crash.type.toLowerCase()}_${crash.serial.replace(/[:.]/g, '_')}_${time}.log`;
     const filePath = path.join(dir, fileName);
 
     const header = [
@@ -382,12 +424,35 @@ class CrashMonitor extends EventEmitter {
     return filePath;
   }
 
+  setWatchedApp(pkg) {
+    this.watchedPkg = pkg || null;
+  }
+
+  stop() {
+    if (this.pollTimer) { clearInterval(this.pollTimer); this.pollTimer = null; }
+    if (this.watchdogTimer) { clearInterval(this.watchdogTimer); this.watchdogTimer = null; }
+    for (const [serial, proc] of this.logcatProcs) {
+      try { proc.kill(); } catch {}
+    }
+    this.logcatProcs.clear();
+    this.deviceBuffers.clear();
+    this.collecting.clear();
+    this.watchedPids.clear();
+    this.connectedSerials = [];
+    this.seenCrashKeys.clear();
+  }
+
+  isRunning() {
+    return this.pollTimer !== null || this.logcatProcs.size > 0;
+  }
+
   getHistory() {
     return [...this.crashes].reverse();
   }
 
   clearHistory() {
     this.crashes = [];
+    this.seenCrashKeys.clear();
   }
 }
 

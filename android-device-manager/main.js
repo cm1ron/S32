@@ -153,10 +153,16 @@ function setupIpcHandlers() {
   deviceMonitor.on('devices-changed', (devices) => {
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('devices-changed', devices);
-      const connected = devices.find((d) => d.status === 'device');
-      if (connected && !crashMonitor.isRunning()) {
-        crashMonitor.start(connected.serial);
-      } else if (!connected) {
+      const connectedSerials = devices
+        .filter((d) => d.status === 'device')
+        .map((d) => d.serial);
+      if (connectedSerials.length) {
+        if (!crashMonitor.isRunning()) {
+          crashMonitor.start(connectedSerials);
+        } else {
+          crashMonitor.updateDevices(connectedSerials);
+        }
+      } else {
         crashMonitor.stop();
       }
     }
@@ -709,11 +715,12 @@ function setupIpcHandlers() {
     return { success: true };
   });
   ipcMain.handle('crash:restart-monitor', (_, serial) => {
-    if (serial) {
-      crashMonitor.start(serial);
-      return { success: true };
+    if (serial && crashMonitor.isRunning()) {
+      crashMonitor.updateDevices([...new Set([...crashMonitor.connectedSerials, serial])]);
+    } else if (serial) {
+      crashMonitor.start([serial]);
     }
-    return { success: false };
+    return { success: true };
   });
   ipcMain.handle('crash:open-folder', () => {
     const { shell } = require('electron');
