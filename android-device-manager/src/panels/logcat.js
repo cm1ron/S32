@@ -24,12 +24,37 @@ const LogcatPanel = {
     window.api.onCrashSummaryUpdated((data) => this.onCrashSummaryUpdated(data));
   },
 
+  _typeLabel(type) {
+    const map = {
+      CRASH: 'Java 크래시',
+      ANR: 'ANR (응답없음)',
+      NATIVE_CRASH: '네이티브 크래시',
+      UNEXPECTED_EXIT: '비정상 종료',
+    };
+    return map[type] || type;
+  },
+
+  _typeBadge(type) {
+    const map = {
+      CRASH: 'JAVA CRASH',
+      ANR: 'ANR',
+      NATIVE_CRASH: 'NATIVE CRASH',
+      UNEXPECTED_EXIT: 'UNEXPECTED EXIT',
+    };
+    return map[type] || type;
+  },
+
+  _shortPkg(app) {
+    return (app || '').replace('com.overdare.overdare', 'overdare');
+  },
+
   onCrashDetected(crash) {
     this.crashCount++;
     this._updateBadges();
 
-    const typeLabel = { CRASH: 'CRASH', ANR: 'ANR', NATIVE_CRASH: 'NATIVE' };
-    App.toast(`${typeLabel[crash.type] || crash.type} 감지: ${crash.app}`, 'error');
+    const device = crash.device || crash.serial || '';
+    const shortPkg = this._shortPkg(crash.app);
+    App.toast(`[${device}] ${this._typeLabel(crash.type)}: ${shortPkg}`, 'error');
 
     const list = document.getElementById('crash-list');
     const empty = list.querySelector('.crash-empty');
@@ -40,10 +65,12 @@ const LogcatPanel = {
     item.dataset.crashTime = crash.time;
     item.innerHTML = `
       <div class="crash-item-header">
-        <span class="crash-item-type crash-type-${crash.type.toLowerCase()}">${typeLabel[crash.type] || crash.type}</span>
-        <span class="crash-item-app">${crash.app}</span>
+        <span class="crash-item-type crash-type-${crash.type.toLowerCase()}">${this._typeBadge(crash.type)}</span>
+        <span class="crash-item-app">${shortPkg}</span>
         <span class="crash-item-time">${crash.timeLocal}</span>
       </div>
+      <div class="crash-item-device">${device}</div>
+      <div class="crash-item-desc">${this._typeLabel(crash.type)}</div>
       <div class="crash-item-summary" id="crash-summary-${crash.time}">
         <span class="crash-summary-loading">AI 요약 생성 중...</span>
       </div>
@@ -64,7 +91,8 @@ const LogcatPanel = {
     const title = document.getElementById('crash-detail-title');
     const log = document.getElementById('crash-detail-log');
 
-    title.textContent = `${crash.type} — ${crash.app} (${crash.timeLocal})`;
+    const device = crash.device || crash.serial || '';
+    title.textContent = `[${device}] ${this._typeLabel(crash.type)} — ${crash.app} (${crash.timeLocal})`;
 
     if (crash.file) {
       const result = await window.api.crashReadLog(crash.file);

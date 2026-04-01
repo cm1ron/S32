@@ -228,6 +228,18 @@ class AdbManager {
       } catch {}
     }
 
+    for (const logFile of logFiles) {
+      if (result.appVersion) break;
+      try {
+        const out = await this._execText(
+          ['shell', 'grep', '-m', '1', 'app_version', logFile],
+          serial, { timeout: 5000 }
+        );
+        const m = out.match(/"app_version":\s*"([^"]+)"/);
+        if (m) result.appVersion = m[1];
+      } catch {}
+    }
+
     if (!result.appVersion) {
       try {
         const ver = await this.getPackageVersion(serial, pkg);

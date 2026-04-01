@@ -3,6 +3,8 @@ const fs = require('fs');
 const path = require('path');
 const EventEmitter = require('events');
 
+const OVERDARE_PKGS = ['com.overdare.overdare', 'com.overdare.overdare.dev'];
+
 class CrashMonitor extends EventEmitter {
   constructor(adbPath, crashDir) {
     super();
@@ -10,6 +12,11 @@ class CrashMonitor extends EventEmitter {
     this.crashDir = crashDir;
     this.process = null;
     this.serial = null;
+    this.deviceName = '';
+    this.watchedPkg = null;
+    this.watchedPid = null;
+    this.watchdogTimer = null;
+    this.watchdogInterval = 3000;
     this.buffer = [];
     this.maxBuffer = 200;
     this.collecting = false;
@@ -17,6 +24,7 @@ class CrashMonitor extends EventEmitter {
     this.collectRemaining = 0;
     this.crashType = null;
     this.crashes = [];
+    this._lastWatchdogAlive = true;
   }
 
   _execAdb(args) {
@@ -45,9 +53,35 @@ class CrashMonitor extends EventEmitter {
     return { activity: activity || focusedWindow || 'unknown', rawActivity: activityDump.slice(0, 2000) };
   }
 
-  start(serial) {
+  async _getPid(pkg) {
+    if (!pkg) return null;
+    try {
+      const out = await this._execAdb(['shell', 'pidof', pkg]);
+      const pid = out.trim().split(/\s+/)[0];
+      return pid ? parseInt(pid, 10) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  async _resolveDeviceName() {
+    try {
+      const out = await this._execAdb(['shell', 'getprop', 'ro.product.model']);
+      this.deviceName = out.trim() || this.serial;
+    } catch {
+      this.deviceName = this.serial;
+    }
+  }
+
+  start(serial, pkg) {
     this.stop();
     this.serial = serial;
+    this.watchedPkg = pkg || null;
+    this.watchedPid = null;
+    this._lastWatchdogAlive = true;
+
+    this._resolveDeviceName();
+
     const args = serial
       ? ['-s', serial, 'logcat', '-v', 'time']
       : ['logcat', '-v', 'time'];
@@ -71,17 +105,132 @@ class CrashMonitor extends EventEmitter {
     this.process.on('error', () => {
       this.process = null;
     });
+
+    if (this.watchedPkg) {
+      this._initWatchdog();
+    }
+  }
+
+  setWatchedApp(pkg) {
+    this.watchedPkg = pkg || null;
+    this.watchedPid = null;
+    this._lastWatchdogAlive = true;
+    if (this.watchdogTimer) {
+      clearInterval(this.watchdogTimer);
+      this.watchdogTimer = null;
+    }
+    if (this.watchedPkg && this.serial) {
+      this._initWatchdog();
+    }
+  }
+
+  async _initWatchdog() {
+    const pid = await this._getPid(this.watchedPkg);
+    this.watchedPid = pid;
+    this._lastWatchdogAlive = !!pid;
+
+    this.watchdogTimer = setInterval(() => this._watchdogCheck(), this.watchdogInterval);
+  }
+
+  async _watchdogCheck() {
+    if (!this.watchedPkg || !this.serial) return;
+
+    const pid = await this._getPid(this.watchedPkg);
+
+    if (this._lastWatchdogAlive && !pid) {
+      const prevPid = this.watchedPid;
+      this.watchedPid = null;
+      this._lastWatchdogAlive = false;
+      await this._handleUnexpectedExit(prevPid);
+    } else if (pid) {
+      if (this.watchedPid !== pid) {
+        this.watchedPid = pid;
+      }
+      this._lastWatchdogAlive = true;
+    }
+  }
+
+  async _handleUnexpectedExit(prevPid) {
+    const now = new Date();
+    const recentLines = [...this.buffer].slice(-60);
+
+    const hasLogcatCrash = recentLines.some(
+      (l) => /FATAL EXCEPTION/i.test(l) || /FATAL signal/i.test(l) || /ANR in/i.test(l)
+    );
+    if (hasLogcatCrash) return;
+
+    let stacktrace = '';
+    try {
+      const crashBuf = await this._execAdb(['shell', 'logcat', '-d', '-b', 'crash', '-t', '100']);
+      if (crashBuf.trim()) {
+        const pkgLines = crashBuf.split('\n').filter(
+          (l) => l.includes(this.watchedPkg) || (prevPid && l.includes(String(prevPid)))
+        );
+        if (pkgLines.length) {
+          stacktrace = pkgLines.join('\n');
+        }
+      }
+    } catch {}
+
+    if (!stacktrace) {
+      const contextLines = recentLines.filter(
+        (l) => l.includes(this.watchedPkg) || (prevPid && l.includes(String(prevPid)))
+      );
+      if (contextLines.length) {
+        stacktrace = contextLines.join('\n');
+      }
+    }
+
+    if (!stacktrace) {
+      stacktrace = `Process ${this.watchedPkg} (PID: ${prevPid || 'unknown'}) terminated unexpectedly.\n` +
+        `No standard crash signature found in logcat.\n` +
+        `This may indicate a native/Unreal Engine crash or low-memory kill.\n\n` +
+        `--- Recent logcat context ---\n` +
+        recentLines.slice(-30).join('\n');
+    }
+
+    const crash = {
+      time: now.toISOString(),
+      timeLocal: this._formatTime(now),
+      type: 'UNEXPECTED_EXIT',
+      app: this.watchedPkg,
+      device: this.deviceName || this.serial,
+      serial: this.serial,
+      activity: 'unknown',
+      preview: `${this.watchedPkg} (PID: ${prevPid || '?'}) 프로세스가 예기치 않게 종료됨`,
+      stacktrace,
+      file: null,
+      summary: null,
+    };
+
+    try {
+      const ctx = await this._captureContext();
+      crash.activity = ctx.activity;
+    } catch {}
+
+    const filePath = this._saveCrashLog(now, crash, stacktrace);
+    crash.file = filePath;
+    this.crashes.push(crash);
+    this.emit('crash', crash);
   }
 
   stop() {
+    if (this.watchdogTimer) {
+      clearInterval(this.watchdogTimer);
+      this.watchdogTimer = null;
+    }
     if (this.process) {
       this.process.kill();
       this.process = null;
     }
     this.serial = null;
+    this.deviceName = '';
+    this.watchedPkg = null;
+    this.watchedPid = null;
     this.buffer = [];
     this.collecting = false;
     this.collectLines = [];
+    this._lastWatchdogAlive = true;
   }
 
   isRunning() {
@@ -125,12 +274,24 @@ class CrashMonitor extends EventEmitter {
     const now = new Date();
     const stacktrace = this.collectLines.join('\n');
 
-    let app = 'unknown';
-    const pidMatch = this.collectLines.find((l) => /FATAL EXCEPTION|ANR in/i.test(l));
-    if (pidMatch) {
-      const appMatch = pidMatch.match(/Process:\s*(\S+)/i) || pidMatch.match(/ANR in\s+(\S+)/i);
+    let app = '';
+    const triggerLine = this.collectLines.find((l) => /FATAL EXCEPTION|ANR in/i.test(l));
+    if (triggerLine) {
+      const appMatch = triggerLine.match(/Process:\s*(\S+)/i) || triggerLine.match(/ANR in\s+(\S+)/i);
       if (appMatch) app = appMatch[1];
     }
+    if (!app) {
+      const processLine = this.collectLines.find((l) => /Process:\s*\S+/i.test(l));
+      if (processLine) {
+        const m = processLine.match(/Process:\s*(\S+)/i);
+        if (m) app = m[1];
+      }
+    }
+
+    const isOurApp = app && OVERDARE_PKGS.some((p) => app.startsWith(p));
+    const isWatchedApp = app && this.watchedPkg && app.startsWith(this.watchedPkg);
+
+    if (!isOurApp && !isWatchedApp) return;
 
     let context = { activity: 'unknown', rawActivity: '' };
     try {
@@ -139,9 +300,11 @@ class CrashMonitor extends EventEmitter {
 
     const crash = {
       time: now.toISOString(),
-      timeLocal: `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`,
+      timeLocal: this._formatTime(now),
       type: this.crashType,
       app,
+      device: this.deviceName || this.serial,
+      serial: this.serial,
       activity: context.activity,
       preview: this.collectLines.slice(0, 5).join('\n'),
       stacktrace,
@@ -157,6 +320,10 @@ class CrashMonitor extends EventEmitter {
     this.collectLines = [];
   }
 
+  _formatTime(d) {
+    return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}:${d.getSeconds().toString().padStart(2, '0')}`;
+  }
+
   _saveCrashLog(now, crash, stacktrace) {
     const today = now.toISOString().slice(0, 10);
     const dir = path.join(this.crashDir, today);
@@ -166,7 +333,15 @@ class CrashMonitor extends EventEmitter {
     const fileName = `${crash.type.toLowerCase()}_${time}.log`;
     const filePath = path.join(dir, fileName);
 
-    const header = `Type: ${crash.type}\nApp: ${crash.app}\nTime: ${crash.time}\nDevice: ${this.serial}\n${'='.repeat(60)}\n\n`;
+    const header = [
+      `Type: ${crash.type}`,
+      `App: ${crash.app}`,
+      `Device: ${crash.device} (${crash.serial})`,
+      `Time: ${crash.time}`,
+      `Activity: ${crash.activity}`,
+      '='.repeat(60),
+      '',
+    ].join('\n');
     fs.writeFileSync(filePath, header + stacktrace, 'utf-8');
     return filePath;
   }

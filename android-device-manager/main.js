@@ -704,6 +704,17 @@ function setupIpcHandlers() {
   // --- Crash Monitor ---
   ipcMain.handle('crash:get-history', () => crashMonitor.getHistory());
   ipcMain.handle('crash:clear-history', () => { crashMonitor.clearHistory(); return { success: true }; });
+  ipcMain.handle('crash:set-watched-app', (_, pkg) => {
+    crashMonitor.setWatchedApp(pkg || null);
+    return { success: true };
+  });
+  ipcMain.handle('crash:restart-monitor', (_, serial) => {
+    if (serial) {
+      crashMonitor.start(serial);
+      return { success: true };
+    }
+    return { success: false };
+  });
   ipcMain.handle('crash:open-folder', () => {
     const { shell } = require('electron');
     fs.mkdirSync(crashDir, { recursive: true });

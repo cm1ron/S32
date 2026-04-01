@@ -15,6 +15,9 @@ const DevicePanel = {
   async refresh() {
     this.detectedPkg = null;
     this.appInfo = null;
+    if (App.currentDevice) {
+      try { await window.api.crashRestartMonitor(App.currentDevice); } catch {}
+    }
     const serverEl = document.getElementById('app-info-server');
     const unrealEl = document.getElementById('app-info-unreal');
     const appVerEl = document.getElementById('app-info-appver');
@@ -100,6 +103,10 @@ const DevicePanel = {
 
     this.detectedPkg = await this.detectPkg();
     const pkg = this.detectedPkg;
+
+    if (pkg) {
+      try { await window.api.crashSetWatchedApp(pkg); } catch {}
+    }
 
     const info = await window.api.getRunningAppInfo(App.currentDevice, pkg);
     info.buildType = pkg.endsWith('.dev') ? 'DEV' : 'RELEASE';

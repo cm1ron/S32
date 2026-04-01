@@ -84,4 +84,6 @@ contextBridge.exposeInMainWorld('api', {
   crashOpenFolder: () => ipcRenderer.invoke('crash:open-folder'),
   crashReadLog: (filePath) => ipcRenderer.invoke('crash:read-log', filePath),
   crashTest: () => ipcRenderer.invoke('crash:test'),
+  crashSetWatchedApp: (pkg) => ipcRenderer.invoke('crash:set-watched-app', pkg),
+  crashRestartMonitor: (serial) => ipcRenderer.invoke('crash:restart-monitor', serial),
 });

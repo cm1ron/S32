@@ -1,7 +1,11 @@
-const LOG_PATHS = {
-  app: '/sdcard/Android/data/com.overdare.overdare.dev/files/App',
-  meta: '/sdcard/Android/data/com.overdare.overdare.dev/files/UnrealGame/Meta/Meta/Saved/Logs',
-};
+const APP_PKGS_MIRROR = ['com.overdare.overdare.dev', 'com.overdare.overdare'];
+
+function getLogPaths(pkg) {
+  return {
+    app: `/sdcard/Android/data/${pkg}/files/App`,
+    meta: `/sdcard/Android/data/${pkg}/files/UnrealGame/Meta/Meta/Saved/Logs`,
+  };
+}
 
 const MirrorInspector = {
   mirroring: false,
@@ -94,26 +98,34 @@ const MirrorInspector = {
       btn.disabled = true;
       App.toast('녹화 중지 — 파일 저장 중...', 'info');
       this.stopRecordTimer();
-      const result = await window.api.stopRecording(App.currentDevice);
       this.recording = false;
       btn.classList.remove('recording');
-      btn.disabled = false;
-      if (result.success) {
-        const fileName = result.filePath.split(/[\\/]/).pop();
-        App.toast(`녹화 저장 완료: ${fileName}`, 'success');
-      } else {
-        App.toast(`녹화 저장 실패: ${result.error}`, 'error');
+      try {
+        const result = await window.api.stopRecording(App.currentDevice);
+        if (result && result.success) {
+          const fileName = result.filePath.split(/[\/]/).pop();
+          App.toast(`녹화 저장 완료: ${fileName}`, 'success');
+        } else {
+          App.toast(`녹화 저장 실패: ${result ? result.error : 'unknown'}`, 'error');
+        }
+      } catch (e) {
+        App.toast(`녹화 저장 오류: ${e.message}`, 'error');
       }
+      btn.disabled = false;
     } else {
       if (!App.currentDevice) return App.toast('디바이스를 먼저 연결해주세요', 'error');
-      const result = await window.api.startRecording(App.currentDevice);
-      if (result.success) {
-        this.recording = true;
-        btn.classList.add('recording');
-        this.startRecordTimer();
-        App.toast('녹화 시작 (최대 3분)', 'success');
-      } else {
-        App.toast(`녹화 실패: ${result.error}`, 'error');
+      try {
+        const result = await window.api.startRecording(App.currentDevice);
+        if (result.success) {
+          this.recording = true;
+          btn.classList.add('recording');
+          this.startRecordTimer();
+          App.toast('녹화 시작 (최대 3분)', 'success');
+        } else {
+          App.toast(`녹화 실패: ${result.error}`, 'error');
+        }
+      } catch (e) {
+        App.toast(`녹화 시작 오류: ${e.message}`, 'error');
       }
     }
   },
@@ -714,17 +726,32 @@ const MirrorInspector = {
 
   async pullAllBoth() {
     if (!App.currentDevice) return App.toast('디바이스를 먼저 연결해주세요', 'error');
+
+    let pkg = DevicePanel.detectedPkg;
+    if (!pkg) {
+      try {
+        const fg = await window.api.getForegroundPkg(App.currentDevice);
+        if (fg && APP_PKGS_MIRROR.includes(fg)) pkg = fg;
+      } catch {}
+    }
+    if (!pkg) pkg = 'com.overdare.overdare.dev';
+    const logPaths = getLogPaths(pkg);
+
     App.toast('앱 + 메타 로그 추출 중...', 'info');
 
-    const result = await window.api.pullAllLogs(App.currentDevice, [LOG_PATHS.app, LOG_PATHS.meta]);
-    if (!result.success) {
-      App.toast(`로그 추출 실패: ${result.error}`, 'error');
-      return;
-    }
+    try {
+      const result = await window.api.pullAllLogs(App.currentDevice, [logPaths.app, logPaths.meta]);
+      if (!result.success) {
+        App.toast(`로그 추출 실패: ${result.error}`, 'error');
+        return;
+      }
 
-    this.lastLogsDir = result.logsDir;
-    App.toast(`로그 ${result.count}개 파일 추출 완료`, 'success');
-    await window.api.openFolder(result.logsDir);
+      this.lastLogsDir = result.logsDir;
+      App.toast(`로그 ${result.count}개 파일 추출 완료`, 'success');
+      await window.api.openFolder(result.logsDir);
+    } catch (e) {
+      App.toast(`로그 추출 오류: ${e.message}`, 'error');
+    }
   },
 
   showLogViewer(result) {
@@ -742,14 +769,22 @@ const MirrorInspector = {
 
   async openLogsFolder() {
     if (this.lastLogsDir) {
-      await window.api.openFolder(this.lastLogsDir);
+      try {
+        await window.api.openFolder(this.lastLogsDir);
+      } catch (e) {
+        App.toast(`폴더 열기 실패: ${e.message}`, 'error');
+      }
     } else {
       App.toast('먼저 로그를 추출해주세요', 'info');
     }
   },
 
   async openScreenshotFolder() {
-    await window.api.openScreenshotFolder();
+    try {
+      await window.api.openScreenshotFolder();
+    } catch (e) {
+      App.toast(`폴더 열기 실패: ${e.message}`, 'error');
+    }
   },
 
   // --- Util ---

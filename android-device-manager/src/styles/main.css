@@ -1225,6 +1225,17 @@ body {
 .crash-type-crash { background: #f38ba8; color: #1e1e2e; }
 .crash-type-anr { background: #fab387; color: #1e1e2e; }
 .crash-type-native_crash { background: #f9e2af; color: #1e1e2e; }
+.crash-type-unexpected_exit { background: #cba6f7; color: #1e1e2e; }
+.crash-item-device {
+  font-size: 11px;
+  color: #89b4fa;
+  padding: 2px 0 0 0;
+}
+.crash-item-desc {
+  font-size: 11px;
+  color: #a6adc8;
+  padding: 1px 0 0 0;
+}
 .crash-item-app {
   flex: 1;
   overflow: hidden;
