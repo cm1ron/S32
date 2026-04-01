@@ -77,8 +77,10 @@ class CrashMonitor extends EventEmitter {
       this._resolveDeviceName(serial);
     }
 
-    this._startPollTimer();
-    this._startWatchdog();
+    this._seedExistingCrashes().then(() => {
+      this._startPollTimer();
+      this._startWatchdog();
+    });
   }
 
   updateDevices(serials) {
@@ -193,6 +195,32 @@ class CrashMonitor extends EventEmitter {
     this.seenCrashKeys.add(crashKey);
 
     await this._emitCrash(serial, state.type, app, state.lines.join('\n'));
+  }
+
+  async _seedExistingCrashes() {
+    for (const serial of this.connectedSerials) {
+      try {
+        const raw = await this._execForSerial(serial, ['shell', 'logcat', '-d', '-b', 'crash', '-t', '200']);
+        if (!raw || !raw.trim()) continue;
+        const lines = raw.split('\n');
+        let i = 0;
+        while (i < lines.length) {
+          const line = lines[i];
+          if (/FATAL EXCEPTION/i.test(line) || /FATAL signal/i.test(line) || /ANR in/i.test(line)) {
+            const type = /FATAL EXCEPTION/i.test(line) ? 'CRASH' : /ANR/i.test(line) ? 'ANR' : 'NATIVE_CRASH';
+            const block = this._extractBlock(lines, i, type);
+            const app = this._extractApp(block.lines);
+            if (app) {
+              const key = this._makeCrashKey(serial, type, app, block.lines);
+              this.seenCrashKeys.add(key);
+            }
+            i = block.endIdx;
+            continue;
+          }
+          i++;
+        }
+      } catch {}
+    }
   }
 
   _startPollTimer() {
@@ -455,7 +483,6 @@ class CrashMonitor extends EventEmitter {
 
   clearHistory() {
     this.crashes = [];
-    this.seenCrashKeys.clear();
   }
 }
 
