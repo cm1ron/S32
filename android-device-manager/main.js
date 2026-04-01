@@ -78,26 +78,34 @@ function createWindow() {
 }
 
 function buildCrashSummaryPrompt(crash) {
-  return `Android 크래시 로그를 분석하여 사용자가 어떤 동작을 했을 때 크래시가 발생했는지 3단계로 요약하라.
+  const context = crash.preContext || '';
+  return `너는 Android QA 크래시 분석 전문가이다.
+아래의 크래시 정보와 크래시 직전 logcat 컨텍스트를 분석하여 사용자가 정확히 어떤 상황에서 크래시가 발생했는지 설명하라.
 
 형식 (반드시 이 형식만 출력):
-1. [화면/상황] 어디에 있었는지
-2. [동작] 무엇을 했는지 (버튼명, 메서드명, 리소스ID 등 포함)
-3. [에러] 어떤 에러가 발생했는지 (Exception 타입 + 원인)
+1. [화면] 사용자가 어떤 화면에 있었는지 (Activity/Fragment 이름 → 한국어 의역)
+2. [행동] 크래시 직전에 사용자가 무엇을 했는지 (버튼 클릭, 화면 전환, API 호출 등)
+3. [원인] 기술적 크래시 원인 (Exception 타입 + 핵심 원인 한 줄)
+4. [재현 추정] 이 크래시를 재현하려면 어떻게 해야 하는지 1-2줄 추정
 
-규칙:
-- 반드시 1. 2. 3. 번호 매긴 3줄만 출력
-- 각 줄은 15자~40자 이내 한국어
-- Activity/Fragment 이름은 한국어로 의역 (예: FriendListActivity → 친구 목록 화면)
-- 스택트레이스에서 클릭 핸들러, 버튼, 리소스 ID 등이 보이면 반드시 포함
-- 불필요한 서론/설명 없이 3줄만 출력
+분석 팁:
+- logcat 컨텍스트에서 크래시 직전의 gRPC 호출, HTTP 요청, 화면 전환, 입력 이벤트를 찾아라
+- "createChannel", "farm-", "grpc" 등은 서버 통신을 의미한다
+- Activity 이름에서 화면을 추론하라 (예: MarketActivity → 마켓/상점 화면)
+- 난독화된 클래스명(r8-map-id, Jg.O, di.a 등)은 "난독화된 코드"로 표기하되 추론 가능한 부분은 설명
+- 각 줄은 한국어 50자 이내로 작성
+- 불필요한 서론/설명 없이 번호 매긴 4줄만 출력
 
 크래시 타입: ${crash.type}
 앱: ${crash.app}
+디바이스: ${crash.device || 'unknown'}
 현재 Activity: ${crash.activity}
 
-스택트레이스:
-${crash.stacktrace.slice(0, 3000)}`;
+=== 크래시 직전 logcat 컨텍스트 (최근 → 오래된 순) ===
+${context.slice(-4000)}
+
+=== 스택트레이스 ===
+${crash.stacktrace.slice(0, 4000)}`;
 }
 
 function setupIpcHandlers() {

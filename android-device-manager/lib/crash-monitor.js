@@ -194,7 +194,9 @@ class CrashMonitor extends EventEmitter {
     if (this.seenCrashKeys.has(crashKey)) return;
     this.seenCrashKeys.add(crashKey);
 
-    await this._emitCrash(serial, state.type, app, state.lines.join('\n'));
+    const buf = this.deviceBuffers.get(serial) || [];
+    const preContext = buf.slice(-100).join('\n');
+    await this._emitCrash(serial, state.type, app, state.lines.join('\n'), preContext);
   }
 
   async _seedExistingCrashes() {
@@ -395,7 +397,7 @@ class CrashMonitor extends EventEmitter {
     }
   }
 
-  async _emitCrash(serial, type, app, stacktrace) {
+  async _emitCrash(serial, type, app, stacktrace, preContext) {
     const now = new Date();
     const deviceName = this.deviceNames.get(serial) || serial;
 
@@ -405,6 +407,18 @@ class CrashMonitor extends EventEmitter {
       const m = dump.match(/ACTIVITY\s+(\S+)\s/);
       if (m) activity = m[1];
     } catch {}
+
+    let contextText = preContext || '';
+    if (!contextText) {
+      const buf = this.deviceBuffers.get(serial) || [];
+      contextText = buf.slice(-100).join('\n');
+    }
+    if (!contextText) {
+      try {
+        const recent = await this._execForSerial(serial, ['shell', 'logcat', '-d', '-t', '100']);
+        contextText = recent || '';
+      } catch {}
+    }
 
     const crash = {
       time: now.toISOString(),
@@ -416,6 +430,7 @@ class CrashMonitor extends EventEmitter {
       activity,
       preview: stacktrace.split('\n').slice(0, 5).join('\n'),
       stacktrace,
+      preContext: contextText,
       file: null,
       summary: null,
     };
