@@ -73,6 +73,18 @@ class CrashMonitor extends EventEmitter {
     }
   }
 
+  async _autoDetectOverdareApp() {
+    for (const pkg of OVERDARE_PKGS) {
+      const pid = await this._getPid(pkg);
+      if (pid) {
+        this.watchedPkg = pkg;
+        this.watchedPid = pid;
+        this._lastWatchdogAlive = true;
+        return;
+      }
+    }
+  }
+
   start(serial, pkg) {
     this.stop();
     this.serial = serial;
@@ -83,8 +95,8 @@ class CrashMonitor extends EventEmitter {
     this._resolveDeviceName();
 
     const args = serial
-      ? ['-s', serial, 'logcat', '-v', 'time']
-      : ['logcat', '-v', 'time'];
+      ? ['-s', serial, 'logcat', '-b', 'main,crash', '-v', 'time']
+      : ['logcat', '-b', 'main,crash', '-v', 'time'];
 
     this.process = spawn(this.adbPath, args);
 
@@ -108,6 +120,12 @@ class CrashMonitor extends EventEmitter {
 
     if (this.watchedPkg) {
       this._initWatchdog();
+    } else {
+      this._autoDetectOverdareApp().then(() => {
+        if (this.watchedPkg) {
+          this._initWatchdog();
+        }
+      });
     }
   }
 
@@ -129,6 +147,7 @@ class CrashMonitor extends EventEmitter {
     this.watchedPid = pid;
     this._lastWatchdogAlive = !!pid;
 
+    if (this.watchdogTimer) clearInterval(this.watchdogTimer);
     this.watchdogTimer = setInterval(() => this._watchdogCheck(), this.watchdogInterval);
   }
 
@@ -147,6 +166,11 @@ class CrashMonitor extends EventEmitter {
         this.watchedPid = pid;
       }
       this._lastWatchdogAlive = true;
+    } else if (!pid && !this._lastWatchdogAlive) {
+      await this._autoDetectOverdareApp();
+      if (this.watchedPid) {
+        this._lastWatchdogAlive = true;
+      }
     }
   }
 
@@ -269,29 +293,41 @@ class CrashMonitor extends EventEmitter {
     this.collectRemaining = 30;
   }
 
+  _extractAppFromLines(lines) {
+    for (const l of lines) {
+      const procMatch = l.match(/Process:\s*(\S+?)(?:,|\s|$)/i);
+      if (procMatch) return procMatch[1];
+    }
+    for (const l of lines) {
+      const sigMatch = l.match(/FATAL signal.*?tid\s+\d+\s+\(([^)]+)\)/i);
+      if (sigMatch) return sigMatch[1];
+    }
+    for (const l of lines) {
+      const anrMatch = l.match(/ANR in\s+(\S+)/i);
+      if (anrMatch) return anrMatch[1];
+    }
+    for (const l of lines) {
+      for (const pkg of OVERDARE_PKGS) {
+        if (l.includes(pkg)) return pkg;
+      }
+    }
+    return '';
+  }
+
   async _finishCrash() {
     this.collecting = false;
     const now = new Date();
     const stacktrace = this.collectLines.join('\n');
 
-    let app = '';
-    const triggerLine = this.collectLines.find((l) => /FATAL EXCEPTION|ANR in/i.test(l));
-    if (triggerLine) {
-      const appMatch = triggerLine.match(/Process:\s*(\S+)/i) || triggerLine.match(/ANR in\s+(\S+)/i);
-      if (appMatch) app = appMatch[1];
-    }
-    if (!app) {
-      const processLine = this.collectLines.find((l) => /Process:\s*\S+/i.test(l));
-      if (processLine) {
-        const m = processLine.match(/Process:\s*(\S+)/i);
-        if (m) app = m[1];
-      }
-    }
+    const app = this._extractAppFromLines(this.collectLines);
 
     const isOurApp = app && OVERDARE_PKGS.some((p) => app.startsWith(p));
     const isWatchedApp = app && this.watchedPkg && app.startsWith(this.watchedPkg);
 
-    if (!isOurApp && !isWatchedApp) return;
+    if (!isOurApp && !isWatchedApp) {
+      this.collectLines = [];
+      return;
+    }
 
     let context = { activity: 'unknown', rawActivity: '' };
     try {
