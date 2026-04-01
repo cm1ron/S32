@@ -408,6 +408,17 @@ class CrashMonitor extends EventEmitter {
       if (m) activity = m[1];
     } catch {}
 
+    let uiHierarchy = '';
+    try {
+      await this._execForSerial(serial, ['shell', 'uiautomator', 'dump', '/sdcard/window_dump.xml']);
+      const xmlRaw = await this._execForSerial(serial, ['shell', 'cat', '/sdcard/window_dump.xml']);
+      if (xmlRaw) {
+        const focused = this._extractFocusedUI(xmlRaw, app);
+        uiHierarchy = focused;
+      }
+      this._execForSerial(serial, ['shell', 'rm', '/sdcard/window_dump.xml']);
+    } catch {}
+
     let contextText = preContext || '';
     if (!contextText) {
       const buf = this.deviceBuffers.get(serial) || [];
@@ -420,6 +431,8 @@ class CrashMonitor extends EventEmitter {
       } catch {}
     }
 
+    const filteredContext = this._filterRelevantContext(contextText, app);
+
     const crash = {
       time: now.toISOString(),
       timeLocal: this._formatTime(now),
@@ -430,7 +443,8 @@ class CrashMonitor extends EventEmitter {
       activity,
       preview: stacktrace.split('\n').slice(0, 5).join('\n'),
       stacktrace,
-      preContext: contextText,
+      preContext: filteredContext,
+      uiHierarchy,
       file: null,
       summary: null,
     };
@@ -442,6 +456,58 @@ class CrashMonitor extends EventEmitter {
 
     this.crashes.push(crash);
     this.emit('crash', crash);
+  }
+
+  _extractFocusedUI(xml, pkg) {
+    const nodes = [];
+    const nodeRegex = /<node[^>]+>/g;
+    let match;
+    while ((match = nodeRegex.exec(xml)) !== null) {
+      const tag = match[0];
+      const rid = (tag.match(/resource-id="([^"]*)"/) || [])[1] || '';
+      const cls = (tag.match(/class="([^"]*)"/) || [])[1] || '';
+      const text = (tag.match(/text="([^"]*)"/) || [])[1] || '';
+      const desc = (tag.match(/content-desc="([^"]*)"/) || [])[1] || '';
+      const clickable = tag.includes('clickable="true"');
+      const focused = tag.includes('focused="true"');
+      const bounds = (tag.match(/bounds="([^"]*)"/) || [])[1] || '';
+
+      if (rid || text || desc || clickable || focused) {
+        const parts = [];
+        if (rid) parts.push(`id="${rid}"`);
+        if (cls) parts.push(`class="${cls.split('.').pop()}"`);
+        if (text) parts.push(`text="${text.slice(0, 50)}"`);
+        if (desc) parts.push(`desc="${desc.slice(0, 50)}"`);
+        if (clickable) parts.push('clickable');
+        if (focused) parts.push('FOCUSED');
+        if (bounds) parts.push(`bounds=${bounds}`);
+        nodes.push(parts.join(' '));
+      }
+    }
+    return nodes.slice(0, 60).join('\n');
+  }
+
+  _filterRelevantContext(contextText, app) {
+    if (!contextText) return '';
+    const lines = contextText.split('\n');
+    const shortPkg = app ? app.split('.').pop() : '';
+    const keywords = [
+      'overdare', 'grpc', 'gRPC', 'createChannel', 'farm-',
+      'Activity', 'Fragment', 'onClick', 'onTouch', 'Button',
+      'ViewClick', 'input_event', 'MotionEvent', 'Navigation',
+      'Error', 'Exception', 'FATAL', 'ANR', 'signal',
+      'market', 'shop', 'friend', 'profile', 'world', 'lobby',
+      'mission', 'avatar', 'emote', 'chat',
+    ];
+    if (shortPkg) keywords.push(shortPkg);
+
+    const filtered = lines.filter((l) => {
+      if (!l.trim()) return false;
+      const lower = l.toLowerCase();
+      return keywords.some((k) => lower.includes(k.toLowerCase()));
+    });
+
+    return filtered.slice(-80).join('\n');
   }
 
   _formatTime(d) {

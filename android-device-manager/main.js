@@ -79,33 +79,30 @@ function createWindow() {
 
 function buildCrashSummaryPrompt(crash) {
   const context = crash.preContext || '';
+  const ui = crash.uiHierarchy || '';
   return `너는 Android QA 크래시 분석 전문가이다.
-아래의 크래시 정보와 크래시 직전 logcat 컨텍스트를 분석하여 사용자가 정확히 어떤 상황에서 크래시가 발생했는지 설명하라.
+크래시 정보, 직전 logcat, UI 계층을 분석하여 사용자 행동과 크래시 원인을 설명하라.
 
 형식 (반드시 이 형식만 출력):
-1. [화면] 사용자가 어떤 화면에 있었는지 (Activity/Fragment 이름 → 한국어 의역)
-2. [행동] 크래시 직전에 사용자가 무엇을 했는지 (버튼 클릭, 화면 전환, API 호출 등)
-3. [원인] 기술적 크래시 원인 (Exception 타입 + 핵심 원인 한 줄)
-4. [재현 추정] 이 크래시를 재현하려면 어떻게 해야 하는지 1-2줄 추정
+1. [화면] 어떤 화면에 있었는지 (Activity명 → 한국어)
+2. [행동] 직전에 무엇을 했는지 (UI 계층의 resource-id, 버튼명, API 호출 등 구체적으로)
+3. [원인] 기술적 원인 (Exception 타입 + 핵심 원인)
+4. [재현] 재현 방법 추정 1-2줄
 
 분석 팁:
-- logcat 컨텍스트에서 크래시 직전의 gRPC 호출, HTTP 요청, 화면 전환, 입력 이벤트를 찾아라
-- "createChannel", "farm-", "grpc" 등은 서버 통신을 의미한다
-- Activity 이름에서 화면을 추론하라 (예: MarketActivity → 마켓/상점 화면)
-- 난독화된 클래스명(r8-map-id, Jg.O, di.a 등)은 "난독화된 코드"로 표기하되 추론 가능한 부분은 설명
-- 각 줄은 한국어 50자 이내로 작성
-- 불필요한 서론/설명 없이 번호 매긴 4줄만 출력
+- UI 계층에서 clickable 요소, FOCUSED 요소, resource-id를 찾아 어떤 버튼을 눌렀는지 추론
+- logcat에서 gRPC, createChannel, farm-, Activity 전환을 찾아라
+- 난독화 클래스(r8-map-id 등)는 "난독화 코드"로 표기하되 추론 가능한 부분은 설명
+- 각 줄 50자 이내 한국어, 4줄만 출력
 
 크래시 타입: ${crash.type}
 앱: ${crash.app}
 디바이스: ${crash.device || 'unknown'}
-현재 Activity: ${crash.activity}
-
-=== 크래시 직전 logcat 컨텍스트 (최근 → 오래된 순) ===
-${context.slice(-4000)}
-
+Activity: ${crash.activity}
+${ui ? `\n=== UI 계층 (크래시 직후 화면 요소) ===\n${ui.slice(0, 2000)}` : ''}
+${context ? `\n=== 직전 logcat ===\n${context.slice(-2000)}` : ''}
 === 스택트레이스 ===
-${crash.stacktrace.slice(0, 4000)}`;
+${crash.stacktrace.slice(0, 2500)}`;
 }
 
 function setupIpcHandlers() {
@@ -143,10 +140,14 @@ function setupIpcHandlers() {
     if (cfg.geminiApiKey && crash.stacktrace) {
       try {
         const genAI = new GoogleGenerativeAI(cfg.geminiApiKey);
-        const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+        const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
         const prompt = buildCrashSummaryPrompt(crash);
 
-        const result = await model.generateContent(prompt);
+        const timeoutMs = 15000;
+        const result = await Promise.race([
+          model.generateContent(prompt),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), timeoutMs)),
+        ]);
         const summary = result.response.text().trim();
         crash.summary = summary;
 
@@ -156,7 +157,15 @@ function setupIpcHandlers() {
             summary,
           });
         }
-      } catch {}
+      } catch (e) {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          const errMsg = e.message === 'timeout' ? 'AI 요약 시간 초과 (15초)' : `AI 요약 실패: ${e.message}`;
+          mainWindow.webContents.send('crash-summary-updated', {
+            time: crash.time,
+            summary: errMsg,
+          });
+        }
+      }
     }
   });
 
